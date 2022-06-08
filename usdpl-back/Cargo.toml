@@ -1,0 +1,9 @@
+[package]
+name = "usdpl-back"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+usdpl-core = { version = "0.1.0", path = "../usdpl-core" }
