@@ -2,8 +2,14 @@
 name = "usdpl-back"
 version = "0.1.0"
 edition = "2021"
+license = "GPL-3.0-only"
+repository = "https://github.com/NGnius/usdpl-rs"
+readme = "../README.md"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = []
+decky = []
+crankshaft = []
 
 [dependencies]
 usdpl-core = { version = "0.1.0", path = "../usdpl-core" }

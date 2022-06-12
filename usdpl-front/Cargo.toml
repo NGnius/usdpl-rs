@@ -4,12 +4,17 @@ description = "WASM front-end library for USDPL"
 version = "0.1.0"
 authors = ["NGnius (Graham) <ngniusness@gmail.com>"]
 edition = "2021"
+license = "GPL-3.0-only"
+repository = "https://github.com/NGnius/usdpl-rs"
+readme = "../README.md"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [features]
 default = ["console_error_panic_hook"]
+decky = []
+crankshaft = []
 
 [dependencies]
 wasm-bindgen = "0.2.63"
@@ -35,6 +40,6 @@ usdpl-core = { version = "0.1.0", path = "../usdpl-core" }
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"
 
-[profile.release]
+#[profile.release]
 # Tell `rustc` to optimize for small code size.
-opt-level = "s"
+#opt-level = "s"

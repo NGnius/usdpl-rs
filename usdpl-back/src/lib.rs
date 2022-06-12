@@ -7,3 +7,7 @@
 mod instance;
 
 pub use instance::Instance;
+
+pub mod core {
+    pub use usdpl_core::*;
+}

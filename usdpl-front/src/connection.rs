@@ -8,8 +8,8 @@ use usdpl_core::socket;
 use usdpl_core::serdes::{Dumpable, Loadable};
 
 #[allow(dead_code)]
-pub(crate) fn send(packet: socket::Packet) -> bool {
-    let socket = match TcpSocket::new(socket::HOST_STR, socket::PORT) {
+pub(crate) fn send(packet: socket::Packet, port: u16) -> bool {
+    let socket = match TcpSocket::new(socket::HOST_STR, port) {
         Ok(s) => s,
         Err(_) => return false,
     };
@@ -30,8 +30,8 @@ pub(crate) fn send(packet: socket::Packet) -> bool {
     }
 }
 
-pub(crate) fn send_native(packet: socket::Packet) -> Option<socket::Packet> {
-    let mut socket = match TcpStream::connect(socket::socket_addr()) {
+pub(crate) fn send_native(packet: socket::Packet, port: u16) -> Option<socket::Packet> {
+    let mut socket = match TcpStream::connect(socket::socket_addr(port)) {
         Ok(s) => s,
         Err(_) => return None,
     };

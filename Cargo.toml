@@ -3,8 +3,15 @@ name = "usdpl-rs"
 version = "0.1.0"
 authors = ["NGnius (Graham) <ngniusness@gmail.com>"]
 edition = "2021"
+license = "GPL-3.0-only"
+repository = "https://github.com/NGnius/usdpl-rs"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[profile.release]
+# Tell `rustc` to optimize for small code size.
+opt-level = "s"
 
 [workspace]
 members = [

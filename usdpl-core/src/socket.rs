@@ -3,17 +3,14 @@ use std::net::{SocketAddrV4, SocketAddr, Ipv4Addr};
 use crate::serdes::{Loadable, Dumpable};
 use crate::{RemoteCall, RemoteCallResponse};
 
-pub const PORT: u16 = 31337;
-pub const HTTP_PORT: u16 = 31338;
 pub const HOST_STR: &str = "127.0.0.1";
 pub const HOST: Ipv4Addr = Ipv4Addr::new(127, 0, 0, 1);
-pub const SOCKET_ADDR_STR: &str = "127.0.0.1:31337";
-//pub const SOCKET_ADDR: SocketAddr = SocketAddr::V4(SocketAddrV4::new(HOST, PORT));
 
 pub const PACKET_BUFFER_SIZE: usize = 1024;
 
-pub fn socket_addr() -> SocketAddr {
-    SocketAddr::V4(SocketAddrV4::new(HOST, PORT))
+#[inline]
+pub fn socket_addr(port: u16) -> SocketAddr {
+    SocketAddr::V4(SocketAddrV4::new(HOST, port))
 }
 
 pub enum Packet {
@@ -24,6 +21,7 @@ pub enum Packet {
     Message(String),
     Unsupported,
     Bad,
+    Many(Vec<Packet>),
 }
 
 impl Packet {
@@ -36,6 +34,7 @@ impl Packet {
             Self::Message(_) => 5,
             Self::Unsupported => 6,
             Self::Bad => 7,
+            Self::Many(_) => 8,
         }
     }
 }
@@ -63,6 +62,10 @@ impl Loadable for Packet {
             },
             6 => (Some(Self::Unsupported), 0),
             7 => (None, 0),
+            8 => {
+                let (obj, len) = <_>::load(&buf[1..]);
+                (obj.map(Self::Many), len)
+            }
             _ => (None, 0)
         };
         result.1 += 1;
@@ -84,6 +87,7 @@ impl Dumpable for Packet {
             Self::Message(s) => s.dump(&mut buf[1..]),
             Self::Unsupported => (true, 0),
             Self::Bad => (false, 0),
+            Self::Many(v) => v.dump(&mut buf[1..]),
         };
         result.1 += 1;
         result
