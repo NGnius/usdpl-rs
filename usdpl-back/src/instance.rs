@@ -5,13 +5,14 @@ use std::io::{Read, Write};
 use usdpl_core::serdes::{Dumpable, Loadable, Primitive};
 use usdpl_core::{RemoteCallResponse, socket};
 
-/// Instance for interacting with the front-end
+/// Back-end instance for interacting with the front-end
 pub struct Instance<'a> {
     calls: HashMap<String, &'a mut dyn FnMut(Vec<Primitive>) -> Vec<Primitive>>,
     port: u16,
 }
 
 impl<'a> Instance<'a> {
+    /// Initialise an instance of the back-end
     #[inline]
     pub fn new(port_usdpl: u16) -> Self {
         Instance {
@@ -21,8 +22,8 @@ impl<'a> Instance<'a> {
     }
 
     /// Register a function which can be invoked by the front-end
-    pub fn register<F: (FnMut(Vec<Primitive>) -> Vec<Primitive>) + Send + Sync>(&mut self, name: String, f: &'a mut F) -> &mut Self {
-        self.calls.insert(name, f);
+    pub fn register<S: std::convert::Into<String>, F: (FnMut(Vec<Primitive>) -> Vec<Primitive>) + Send + Sync>(&mut self, name: S, f: &'a mut F) -> &mut Self {
+        self.calls.insert(name.into(), f);
         self
     }
 

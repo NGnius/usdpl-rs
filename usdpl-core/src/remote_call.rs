@@ -1,5 +1,6 @@
 use crate::serdes::{Primitive, Loadable, Dumpable};
 
+/// Remote call packet representing a function to call on the back-end, sent from the front-end
 pub struct RemoteCall {
     pub id: u64,
     pub function: String,
@@ -46,6 +47,7 @@ impl Dumpable for RemoteCall {
     }
 }
 
+/// Remote call response packet representing the response from a remote call after the back-end has executed it.
 pub struct RemoteCallResponse {
     pub id: u64,
     pub response: Vec<Primitive>,

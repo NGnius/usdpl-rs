@@ -1,12 +1,12 @@
 [package]
 name = "usdpl"
-description = "WASM front-end library for USDPL"
 version = "0.1.0"
 authors = ["NGnius (Graham) <ngniusness@gmail.com>"]
 edition = "2021"
 license = "GPL-3.0-only"
 repository = "https://github.com/NGnius/usdpl-rs"
 readme = "../README.md"
+description = "Universal Steam Deck Plugin Library front-end designed for WASM"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

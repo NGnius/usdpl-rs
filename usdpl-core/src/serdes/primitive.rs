@@ -1,5 +1,7 @@
 use super::{Loadable, Dumpable};
 
+/// Primitive types supported for communication between the USDPL back- and front-end.
+/// These are used for sending over the TCP connection.
 pub enum Primitive {
     Empty,
     String(String),
@@ -108,6 +110,12 @@ impl Dumpable for Primitive {
 impl std::convert::Into<Primitive> for String {
     fn into(self) -> Primitive {
         Primitive::String(self)
+    }
+}
+
+impl std::convert::Into<Primitive> for &str {
+    fn into(self) -> Primitive {
+        Primitive::String(self.to_string())
     }
 }
 

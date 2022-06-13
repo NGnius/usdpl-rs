@@ -13,6 +13,7 @@ pub fn socket_addr(port: u16) -> SocketAddr {
     SocketAddr::V4(SocketAddrV4::new(HOST, port))
 }
 
+/// Accepted Packet types and the data they contain
 pub enum Packet {
     Call(RemoteCall),
     CallResponse(RemoteCallResponse),
@@ -25,6 +26,7 @@ pub enum Packet {
 }
 
 impl Packet {
+    /// Byte representing the packet type -- the first byte of any packet in USDPL
     const fn discriminant(&self) -> u8 {
         match self {
             Self::Call(_) => 1,

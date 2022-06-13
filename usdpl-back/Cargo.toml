@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 license = "GPL-3.0-only"
 repository = "https://github.com/NGnius/usdpl-rs"
-readme = "../README.md"
+readme = "README.md"
+description = "Universal Steam Deck Plugin Library back-end"
 
 [features]
 default = []
