@@ -6,6 +6,7 @@
 
 mod connection;
 mod convert;
+mod imports;
 
 use wasm_bindgen::prelude::*;
 
@@ -17,11 +18,6 @@ const REMOTE_PORT: std::sync::atomic::AtomicU16 = std::sync::atomic::AtomicU16::
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-#[wasm_bindgen]
-extern {
-    //fn alert(s: &str);
-}
 
 /// Initialize the front-end library
 #[wasm_bindgen]
@@ -52,13 +48,16 @@ pub fn call_backend(name: String, parameters: Vec<JsValue>) -> Option<Vec<JsValu
     for val in parameters {
         params.push(convert::js_to_primitive(val));
     }
-    let results = match connection::send_native(Packet::Call(RemoteCall {
+    let results = match connection::send_js(Packet::Call(RemoteCall {
         id: next_id,
         function: name,
         parameters: params,
     }), REMOTE_PORT.load(std::sync::atomic::Ordering::Relaxed)) {
         Some(Packet::CallResponse(resp)) => resp,
-        _ => return None,
+        _ => {
+            imports::console_error("USDPL error: connection::send_native(...) returned None");
+            return None
+        },
     };
     let mut js_results = Vec::with_capacity(results.response.len());
     for val in results.response {

@@ -4,9 +4,11 @@
 //! This is a minimalist TCP server for handling events from the front-end.
 //!
 
+mod errors;
 mod instance;
 
 pub use instance::Instance;
+pub use errors::{ServerError, ServerResult};
 
 pub mod core {
     pub use usdpl_core::*;
