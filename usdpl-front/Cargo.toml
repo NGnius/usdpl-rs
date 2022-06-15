@@ -1,6 +1,6 @@
 [package]
 name = "usdpl"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["NGnius (Graham) <ngniusness@gmail.com>"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -18,6 +18,7 @@ crankshaft = []
 
 [dependencies]
 wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
@@ -32,11 +33,17 @@ console_error_panic_hook = { version = "0.1.6", optional = true }
 # Unfortunately, `wee_alloc` requires nightly Rust when targeting wasm for now.
 wee_alloc = { version = "0.4.5", optional = true }
 
-web-sys = { version = "0.3", features = ["WebSocket", "MessageEvent", "ErrorEvent", "BinaryType"] }
+web-sys = { version = "0.3", features = [
+  'Headers',
+  'Request',
+  'RequestInit',
+  'RequestMode',
+  'Response',
+  'Window',
+]}#["WebSocket", "MessageEvent", "ErrorEvent", "BinaryType"] }
 js-sys = { version = "0.3" }
-wasm-rs-shared-channel = { version = "0.1" }
 
-usdpl-core = { version = "0.1.0", path = "../usdpl-core" }
+usdpl-core = { version = "0.3.0", path = "../usdpl-core" }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"

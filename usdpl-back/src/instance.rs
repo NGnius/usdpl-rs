@@ -1,36 +1,45 @@
-use std::net::{TcpListener, TcpStream, SocketAddr};
+//use std::net::{TcpListener, TcpStream, SocketAddr};
 use std::collections::HashMap;
+//use std::sync::Arc;
 //use std::io::{Read, Write};
 
-use tungstenite::accept;
-use tungstenite::protocol::{Message, WebSocket};
+use lazy_static::lazy_static;
+
+use warp::Filter;
 
 use usdpl_core::serdes::{Dumpable, Loadable, Primitive};
 use usdpl_core::{RemoteCallResponse, socket};
 
+type Callable = Box<(dyn (Fn(Vec<Primitive>) -> Vec<Primitive>) + Send + Sync)>;
+
+lazy_static! {
+    static ref CALLS: std::sync::Mutex<HashMap<String, Callable>> = std::sync::Mutex::new(HashMap::new());
+}
+
 /// Back-end instance for interacting with the front-end
-pub struct Instance<'a> {
-    calls: HashMap<String, &'a mut dyn FnMut(Vec<Primitive>) -> Vec<Primitive>>,
+pub struct Instance {
+    //calls: HashMap<String, Callable>,
     port: u16,
 }
 
-impl<'a> Instance<'a> {
+impl Instance {
     /// Initialise an instance of the back-end
     #[inline]
     pub fn new(port_usdpl: u16) -> Self {
         Instance {
-            calls: HashMap::new(),
+            //calls: HashMap::new(),
             port: port_usdpl,
         }
     }
 
     /// Register a function which can be invoked by the front-end
-    pub fn register<S: std::convert::Into<String>, F: (FnMut(Vec<Primitive>) -> Vec<Primitive>) + Send + Sync>(&mut self, name: S, f: &'a mut F) -> &mut Self {
-        self.calls.insert(name.into(), f);
+    pub fn register<S: std::convert::Into<String>, F: (Fn(Vec<Primitive>) -> Vec<Primitive>) + Send + Sync + 'static>(&mut self, name: S, f: F) -> &mut Self {
+        CALLS.lock().unwrap().insert(name.into(), Box::new(f));
+        //self.calls.insert(name.into(), Box::new(f));
         self
     }
 
-    fn handle_packet<const ERROR: bool>(&mut self, packet: socket::Packet, buffer: &mut [u8], incoming: &mut WebSocket<TcpStream>, peer_addr: &SocketAddr) -> super::ServerResult {
+    /*fn handle_packet<const ERROR: bool>(&mut self, packet: socket::Packet, buffer: &mut [u8], peer_addr: &SocketAddr) -> Result<String, super::ServerError> {
         match packet {
             socket::Packet::Call(obj) => {
                 if let Some(target_func) = self.calls.get_mut(&obj.function) {
@@ -93,64 +102,78 @@ impl<'a> Instance<'a> {
             }
         }
         Ok(())
+    }*/
+
+    pub fn serve(self) -> super::ServerResult {
+        let result = self.serve_internal();
+        //println!("Stopping server due to serve_internal returning a result");
+        tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(result)
     }
 
-    pub fn serve<const ERROR: bool>(&mut self) -> super::ServerResult {
-        let result = self.serve_internal::<ERROR>();
-        //println!("Stopping server due to serve_internal returning a result");
-        result
+    fn handle_call(packet: socket::Packet) -> socket::Packet {
+        println!("Got packet");
+        match packet {
+            socket::Packet::Call(call) => {
+                let handlers = CALLS.lock().expect("Failed to acquite CALLS lock");
+                if let Some(target) = handlers.get(&call.function) {
+                    let result = target(call.parameters);
+                    socket::Packet::CallResponse(RemoteCallResponse {
+                        id: call.id,
+                        response: result,
+                    })
+                } else {
+                    socket::Packet::Invalid
+                }
+            },
+            socket::Packet::Many(packets) => {
+                let mut result = Vec::with_capacity(packets.len());
+                for packet in packets {
+                    result.push(Self::handle_call(packet));
+                }
+                socket::Packet::Many(result)
+            },
+            _ => socket::Packet::Invalid,
+        }
     }
 
     /// Receive and execute callbacks forever
-    pub fn serve_internal<const ERROR: bool>(&mut self) -> super::ServerResult {
-        let listener = TcpListener::bind(socket::socket_addr(self.port)).map_err(super::ServerError::Io)?;
-        let mut buffer = [0u8; socket::PACKET_BUFFER_SIZE];
-        for incoming in listener.incoming() {
-            let incoming = incoming.map_err(super::ServerError::Io)?;
-            let peer_addr = incoming.peer_addr().map_err(super::ServerError::Io)?;
-            let mut incoming = match accept(incoming) {
-                Ok(s) => s,
-                Err(_) => continue,
-            };
-            match incoming.read_message() {
-                Err(e) => if ERROR {
-                    return Err(super::ServerError::Io(std::io::Error::new(std::io::ErrorKind::Unsupported, format!("Invalid message received from {}: {}", peer_addr, e))));
+    pub async fn serve_internal(self) -> super::ServerResult {
+        //let handlers = self.calls;
+        //self.calls = HashMap::new();
+        let calls = warp::post()
+            .and(warp::path("usdpl/call"))
+            .and(warp::body::content_length_limit((socket::PACKET_BUFFER_SIZE * 2) as _))
+            .and(warp::body::bytes())
+            .map(|data: bytes::Bytes| {
+                let (obj_maybe, _) = socket::Packet::load_base64(&data);
+                let mut buffer = [0u8; socket::PACKET_BUFFER_SIZE];
+                if let Some(packet) = obj_maybe {
+                    let response = Self::handle_call(packet);
+                    let (ok, len) = response.dump_base64(&mut buffer);
+                    if !ok {
+                        eprintln!("Failed to dump response packet");
+                        warp::reply::with_status(warp::http::Response::builder()
+                            .body("Failed to dump response packet".to_string()), warp::http::StatusCode::from_u16(400).unwrap())
+                    } else {
+                        let string: String = String::from_utf8_lossy(&buffer[..len]).into();
+                        warp::reply::with_status(warp::http::Response::builder()
+                            .body(string), warp::http::StatusCode::from_u16(200).unwrap())
+                    }
                 } else {
-                    eprintln!("Invalid message received from {}: {}", peer_addr, e);
-                },
-                Ok(Message::Binary(bin)) => {
-                    let (obj_maybe, _) = socket::Packet::load(bin.as_slice());
-                    if let Some(packet) = obj_maybe {
-                        self.handle_packet::<ERROR>(packet, &mut buffer, &mut incoming, &peer_addr)?;
-                    } else {
-                        if ERROR {
-                            return Err(super::ServerError::Io(std::io::Error::new(std::io::ErrorKind::Unsupported, format!("Invalid packet received from {}", peer_addr))));
-                        } else {
-                            eprintln!("Invalid packet received from {}", peer_addr);
-                        }
-                    }
-                },
-                Ok(_) => {
-                    let (_, len) = socket::Packet::Unsupported.dump(&mut buffer);
-                    if ERROR {
-                        let mut vec = Vec::with_capacity(len);
-                        vec.extend_from_slice(&buffer[..len]);
-                        incoming.write_message(Message::Binary(vec)).map_err(super::ServerError::Tungstenite)?;
-                    } else {
-                        let mut vec = Vec::with_capacity(len);
-                        vec.extend_from_slice(&buffer[..len]);
-                        incoming.write_message(Message::Binary(vec)).unwrap_or_default();
-                    }
+                    eprintln!("Failed to load packet");
+                    warp::reply::with_status(warp::http::Response::builder()
+                        .body("Failed to load packet".to_string()), warp::http::StatusCode::from_u16(400).unwrap())
                 }
-            }
-            incoming.close(None).map_err(super::ServerError::Tungstenite)?;
-            'endless: loop {
-                match incoming.read_message() {
-                    Err(tungstenite::error::Error::ConnectionClosed) => break 'endless,
-                    _ => {}
-                }
-            }
-        }
+            })
+            .map(|reply| {
+                warp::reply::with_header(reply, "Access-Control-Allow-Origin", "*")
+            });
+
+        warp::serve(calls).run(([127, 0, 0, 1], self.port)).await;
         Ok(())
     }
 }
