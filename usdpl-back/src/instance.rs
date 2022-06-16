@@ -27,25 +27,42 @@ impl Instance {
         }
     }
 
-    /// Register a function which can be invoked by the front-end
+    /// Register a function which can be invoked by the front-end, builder style
     pub fn register<S: std::convert::Into<String>, F: Callable + 'static>(
-        &mut self,
+        mut self,
         name: S,
         f: F,
-    ) -> &mut Self {
-        //CALLS.lock().unwrap().insert(name.into(), Mutex::new(Box::new(f)));
+    ) -> Self {
         self.calls
             .insert(name.into(), Arc::new(Mutex::new(Box::new(f))));
         self
     }
 
-    pub fn serve(&self) -> Result<(), ()> {
+    /// Register a function which can be invoked by the front-end, object style
+    pub fn register_mut<S: std::convert::Into<String>, F: Callable + 'static>(
+        &mut self,
+        name: S,
+        f: F,
+    ) -> &mut Self {
+        self.calls
+            .insert(name.into(), Arc::new(Mutex::new(Box::new(f))));
+        self
+    }
+
+    /// Run the web server instance forever, blocking this thread
+    #[cfg(feature = "blocking")]
+    pub fn run_blocking(&self) -> Result<(), ()> {
         let result = self.serve_internal();
         tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
             .unwrap()
             .block_on(result)
+    }
+
+    /// Run the web server forever, asynchronously
+    pub async fn run(&self) -> Result<(), ()> {
+        self.serve_internal().await
     }
 
     fn handle_call(
@@ -80,7 +97,7 @@ impl Instance {
     }
 
     /// Receive and execute callbacks forever
-    pub async fn serve_internal(&self) -> Result<(), ()> {
+    async fn serve_internal(&self) -> Result<(), ()> {
         let handlers = self.calls.clone();
         //self.calls = HashMap::new();
         let calls = warp::post()

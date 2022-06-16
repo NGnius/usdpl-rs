@@ -1,5 +1,7 @@
 //! Datatypes and constants core the back-end and front-end libraries' operation.
 //! This contains serialization functionality and networking datatypes.
+#![warn(missing_docs)]
+
 mod remote_call;
 
 #[cfg(not(any(feature = "decky", feature = "crankshaft")))]
@@ -15,6 +17,8 @@ pub mod socket;
 
 pub use remote_call::{RemoteCall, RemoteCallResponse};
 
+/// USDPL core API.
+/// This contains functionality used in both the back-end and front-end.
 pub mod api {
     #[cfg(not(any(feature = "decky", feature = "crankshaft")))]
     pub use super::api_any::*;

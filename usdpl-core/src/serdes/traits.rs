@@ -5,8 +5,11 @@ const B64_CONF: Config = Config::new(base64::CharacterSet::Standard, true);
 /// Errors from Loadable::load
 #[derive(Debug)]
 pub enum LoadError {
+    /// Buffer smaller than expected
     TooSmallBuffer,
+    /// Unexpected/corrupted data encountered
     InvalidData,
+    /// Unimplemented
     #[cfg(debug_assertions)]
     Todo,
 }
@@ -28,6 +31,7 @@ pub trait Loadable: Sized {
     /// If anything is wrong with the buffer, None should be returned.
     fn load(buffer: &[u8]) -> Result<(Self, usize), LoadError>;
 
+    /// Load data from a base64-encoded buffer
     fn load_base64(buffer: &[u8]) -> Result<(Self, usize), LoadError> {
         let mut buffer2 = [0u8; crate::socket::PACKET_BUFFER_SIZE];
         let len = decode_config_slice(buffer, B64_CONF, &mut buffer2)
@@ -39,8 +43,11 @@ pub trait Loadable: Sized {
 /// Errors from Dumpable::dump
 #[derive(Debug)]
 pub enum DumpError {
+    /// Buffer not big enough to dump data into
     TooSmallBuffer,
+    /// Data cannot be dumped
     Unsupported,
+    /// Unimplemented
     #[cfg(debug_assertions)]
     Todo,
 }
@@ -62,6 +69,8 @@ pub trait Dumpable {
     /// If anything is wrong, false should be returned.
     fn dump(&self, buffer: &mut [u8]) -> Result<usize, DumpError>;
 
+    /// Dump data as base64-encoded.
+    /// Useful for transmitting data as text.
     fn dump_base64(&self, buffer: &mut [u8]) -> Result<usize, DumpError> {
         let mut buffer2 = [0u8; crate::socket::PACKET_BUFFER_SIZE];
         let len = self.dump(&mut buffer2)?;

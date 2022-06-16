@@ -2,8 +2,11 @@ use crate::serdes::{DumpError, Dumpable, LoadError, Loadable, Primitive};
 
 /// Remote call packet representing a function to call on the back-end, sent from the front-end
 pub struct RemoteCall {
+    /// The call id assigned by the front-end
     pub id: u64,
+    /// The function's name
     pub function: String,
+    /// The function's input parameters
     pub parameters: Vec<Primitive>,
 }
 
@@ -34,7 +37,9 @@ impl Dumpable for RemoteCall {
 
 /// Remote call response packet representing the response from a remote call after the back-end has executed it.
 pub struct RemoteCallResponse {
+    /// The call id from the RemoteCall
     pub id: u64,
+    /// The function's result
     pub response: Vec<Primitive>,
 }
 

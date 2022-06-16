@@ -1,13 +1,18 @@
+//! Web messaging
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 
 use crate::serdes::{DumpError, Dumpable, LoadError, Loadable};
 use crate::{RemoteCall, RemoteCallResponse};
 
-pub const HOST_STR: &str = "127.0.0.1";
+/// Host IP address for web browsers
+pub const HOST_STR: &str = "localhost";
+/// Host IP address
 pub const HOST: Ipv4Addr = Ipv4Addr::new(127, 0, 0, 1);
 
+/// Standard max packet size
 pub const PACKET_BUFFER_SIZE: usize = 1024;
 
+/// Address and port
 #[inline]
 pub fn socket_addr(port: u16) -> SocketAddr {
     SocketAddr::V4(SocketAddrV4::new(HOST, port))
@@ -15,13 +20,21 @@ pub fn socket_addr(port: u16) -> SocketAddr {
 
 /// Accepted Packet types and the data they contain
 pub enum Packet {
+    /// A remote call
     Call(RemoteCall),
+    /// A reponse to a remote call
     CallResponse(RemoteCallResponse),
+    /// Unused
     KeepAlive,
+    /// Invalid
     Invalid,
+    /// General message
     Message(String),
+    /// Response to an unsupported packet
     Unsupported,
+    /// Broken packet type, useful for testing
     Bad,
+    /// Many packets merged into one
     Many(Vec<Packet>),
 }
 

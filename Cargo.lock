@@ -925,20 +925,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "usdpl"
-version = "0.4.0"
-dependencies = [
- "console_error_panic_hook",
- "js-sys",
- "usdpl-core",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "wasm-bindgen-test",
- "web-sys",
- "wee_alloc",
-]
-
-[[package]]
 name = "usdpl-back"
 version = "0.4.0"
 dependencies = [
@@ -953,6 +939,20 @@ name = "usdpl-core"
 version = "0.4.0"
 dependencies = [
  "base64",
+]
+
+[[package]]
+name = "usdpl-front"
+version = "0.4.0"
+dependencies = [
+ "console_error_panic_hook",
+ "js-sys",
+ "usdpl-core",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "wasm-bindgen-test",
+ "web-sys",
+ "wee_alloc",
 ]
 
 [[package]]

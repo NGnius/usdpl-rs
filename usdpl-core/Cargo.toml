@@ -7,7 +7,10 @@ repository = "https://github.com/NGnius/usdpl-rs"
 readme = "README.md"
 description = "Universal Steam Deck Plugin Library core"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = []
+decky = []
+crankshaft = []
 
 [dependencies]
 base64 = "0.13"

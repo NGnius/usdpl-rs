@@ -3,6 +3,7 @@
 //!
 //! In true Javascript tradition, this part of the library does not support error handling.
 //!
+#![warn(missing_docs)]
 
 mod connection;
 mod convert;
@@ -17,9 +18,9 @@ use usdpl_core::{socket::Packet, RemoteCall};
 
 static mut CTX: UsdplContext = UsdplContext { port: 31337, id: 1 };
 
-#[wasm_bindgen]
+//#[wasm_bindgen]
 #[derive(Debug)]
-pub struct UsdplContext {
+struct UsdplContext {
     port: u16,
     id: u64,
 }
@@ -62,6 +63,7 @@ pub fn target() -> String {
 /// Returns null (None) if this fails for any reason.
 #[wasm_bindgen]
 pub async fn call_backend(name: String, parameters: Vec<JsValue>) -> JsValue {
+    #[cfg(feature = "debug")]
     imports::console_log(&format!(
         "call_backend({}, [params; {}])",
         name,
@@ -73,6 +75,7 @@ pub async fn call_backend(name: String, parameters: Vec<JsValue>) -> JsValue {
         params.push(convert::js_to_primitive(val));
     }
     let port = get_port();
+    #[cfg(feature = "debug")]
     imports::console_log(&format!("USDPL: Got port {}", port));
     let results = connection::send_js(
         Packet::Call(RemoteCall {
@@ -85,7 +88,9 @@ pub async fn call_backend(name: String, parameters: Vec<JsValue>) -> JsValue {
     .await;
     let results = match results {
         Ok(x) => x,
+        #[allow(unused_variables)]
         Err(e) => {
+            #[cfg(feature = "debug")]
             imports::console_error(&format!("USDPL: Got error while calling {}: {:?}", name, e));
             return JsValue::NULL;
         }

@@ -8,9 +8,10 @@ readme = "README.md"
 description = "Universal Steam Deck Plugin Library back-end"
 
 [features]
-default = []
-decky = []
-crankshaft = []
+default = ["blocking"]
+decky = ["usdpl-core/decky"]
+crankshaft = ["usdpl-core/crankshaft"]
+blocking = ["tokio"] # synchronous API for async functionality, using tokio
 
 [dependencies]
 usdpl-core = { version = "0.4.0", path = "../usdpl-core" }
@@ -18,4 +19,4 @@ usdpl-core = { version = "0.4.0", path = "../usdpl-core" }
 # HTTP web framework
 warp = { version = "0.3" }
 bytes = { version = "1.1" }
-tokio = { version = "1.19", features = ["rt", "rt-multi-thread"] }
+tokio = { version = "1.19", features = ["rt", "rt-multi-thread"], optional = true }

@@ -3,19 +3,30 @@ use super::{DumpError, Dumpable, LoadError, Loadable};
 /// Primitive types supported for communication between the USDPL back- and front-end.
 /// These are used for sending over the TCP connection.
 pub enum Primitive {
+    /// Null or unsupported object
     Empty,
+    /// String-like
     String(String),
+    /// f32
     F32(f32),
+    /// f64
     F64(f64),
+    /// u32
     U32(u32),
+    /// u64
     U64(u64),
+    /// i32
     I32(i32),
+    /// i64
     I64(i64),
+    /// boolean
     Bool(bool),
+    /// Non-primitive in Json format
     Json(String),
 }
 
 impl Primitive {
+    /// Discriminant -- first byte of a dumped primitive
     const fn discriminant(&self) -> u8 {
         match self {
             Self::Empty => 1,

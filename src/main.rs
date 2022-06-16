@@ -3,13 +3,17 @@
 //! A faster, lighter way to write plugins
 //!
 //! ## Goals
-//! - [ ] Minimum viable plugin
-//! - [ ] Call back-end API from front-end UI
-//! - [ ] Async support
+//! - [x] Minimum viable plugin
+//! - [x] Call back-end API from front-end UI
+//! - [x] External API documentation
+//! - [ ] Internal API documentation
+//! - [x] Async support
+//! - [ ] Sync support
 //! - [ ] PluginLoader/Decky support
 //! - [ ] Crankshaft support
 //! - [ ] Unnamed plugin system support
 //! - [ ] Cross-framework tooling
+//! - [ ] Other programming languages support (C bindings)
 //!
 fn main() {
     println!("Hello, USDPL!");
