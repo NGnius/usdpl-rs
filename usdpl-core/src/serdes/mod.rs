@@ -6,5 +6,5 @@ mod load_impl;
 mod primitive;
 mod traits;
 
-pub use traits::{Dumpable, Loadable};
 pub use primitive::Primitive;
+pub use traits::{DumpError, Dumpable, LoadError, Loadable};

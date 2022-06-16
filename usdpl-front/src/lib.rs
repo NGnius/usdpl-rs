@@ -8,17 +8,14 @@ mod connection;
 mod convert;
 mod imports;
 
-use wasm_bindgen::prelude::*;
 use js_sys::Array;
+use wasm_bindgen::prelude::*;
 
 use usdpl_core::{socket::Packet, RemoteCall};
 //const REMOTE_CALL_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 //const REMOTE_PORT: std::sync::atomic::AtomicU16 = std::sync::atomic::AtomicU16::new(31337);
 
-static mut CTX: UsdplContext = UsdplContext {
-    port: 31337,
-    id: 1,
-};
+static mut CTX: UsdplContext = UsdplContext { port: 31337, id: 1 };
 
 #[wasm_bindgen]
 #[derive(Debug)]
@@ -28,12 +25,14 @@ pub struct UsdplContext {
 }
 
 fn get_port() -> u16 {
-    unsafe {CTX.port}
+    unsafe { CTX.port }
 }
 
 fn increment_id() -> u64 {
-    let current_id = unsafe {CTX.id};
-    unsafe {CTX.id += 1;}
+    let current_id = unsafe { CTX.id };
+    unsafe {
+        CTX.id += 1;
+    }
     current_id
 }
 
@@ -49,29 +48,25 @@ pub fn init_usdpl(port: u16) {
     console_error_panic_hook::set_once();
     //REMOTE_PORT.store(port, std::sync::atomic::Ordering::SeqCst);
     unsafe {
-        CTX = UsdplContext {
-            port: port,
-            id: 1,
-        };
+        CTX = UsdplContext { port: port, id: 1 };
     }
 }
 
 /// Get the targeted plugin framework, or "any" if unknown
 #[wasm_bindgen]
 pub fn target() -> String {
-    #[cfg(all(feature = "decky", not(any(feature = "crankshaft"))))]
-    {"decky".to_string()}
-    #[cfg(all(feature = "crankshaft", not(any(feature = "decky"))))]
-    {"crankshaft".to_string()}
-    #[cfg(not(any(feature = "decky", feature = "crankshaft")))]
-    {"any".to_string()}
+    usdpl_core::api::Platform::current().to_string()
 }
 
 /// Call a function on the back-end.
 /// Returns null (None) if this fails for any reason.
 #[wasm_bindgen]
 pub async fn call_backend(name: String, parameters: Vec<JsValue>) -> JsValue {
-    imports::console_log(&format!("call_backend({}, [params; {}])", name, parameters.len()));
+    imports::console_log(&format!(
+        "call_backend({}, [params; {}])",
+        name,
+        parameters.len()
+    ));
     let next_id = increment_id();
     let mut params = Vec::with_capacity(parameters.len());
     for val in parameters {
@@ -79,11 +74,15 @@ pub async fn call_backend(name: String, parameters: Vec<JsValue>) -> JsValue {
     }
     let port = get_port();
     imports::console_log(&format!("USDPL: Got port {}", port));
-    let results = connection::send_js(Packet::Call(RemoteCall {
-        id: next_id,
-        function: name.clone(),
-        parameters: params,
-    }), port).await;
+    let results = connection::send_js(
+        Packet::Call(RemoteCall {
+            id: next_id,
+            function: name.clone(),
+            parameters: params,
+        }),
+        port,
+    )
+    .await;
     let results = match results {
         Ok(x) => x,
         Err(e) => {

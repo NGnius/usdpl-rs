@@ -1,6 +1,6 @@
-use std::net::{SocketAddrV4, SocketAddr, Ipv4Addr};
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 
-use crate::serdes::{Loadable, Dumpable};
+use crate::serdes::{DumpError, Dumpable, LoadError, Loadable};
 use crate::{RemoteCall, RemoteCallResponse};
 
 pub const HOST_STR: &str = "127.0.0.1";
@@ -42,56 +42,56 @@ impl Packet {
 }
 
 impl Loadable for Packet {
-    fn load(buf: &[u8]) -> (Option<Self>, usize) {
+    fn load(buf: &[u8]) -> Result<(Self, usize), LoadError> {
         if buf.len() == 0 {
-            return (None, 1);
+            return Err(LoadError::TooSmallBuffer);
         }
-        let mut result: (Option<Self>, usize) = match buf[0] {
+        let mut result: (Self, usize) = match buf[0] {
             //0 => (None, 0),
             1 => {
-                let (obj, len) = RemoteCall::load(&buf[1..]);
-                (obj.map(Self::Call), len)
-            },
-            2 => {
-                let (obj, len) = RemoteCallResponse::load(&buf[1..]);
-                (obj.map(Self::CallResponse), len)
-            },
-            3 => (Some(Self::KeepAlive), 0),
-            4 => (Some(Self::Invalid), 0),
-            5 => {
-                let (obj, len) = String::load(&buf[1..]);
-                (obj.map(Self::Message), len)
-            },
-            6 => (Some(Self::Unsupported), 0),
-            7 => (None, 0),
-            8 => {
-                let (obj, len) = <_>::load(&buf[1..]);
-                (obj.map(Self::Many), len)
+                let (obj, len) = RemoteCall::load(&buf[1..])?;
+                (Self::Call(obj), len)
             }
-            _ => (None, 0)
+            2 => {
+                let (obj, len) = RemoteCallResponse::load(&buf[1..])?;
+                (Self::CallResponse(obj), len)
+            }
+            3 => (Self::KeepAlive, 0),
+            4 => (Self::Invalid, 0),
+            5 => {
+                let (obj, len) = String::load(&buf[1..])?;
+                (Self::Message(obj), len)
+            }
+            6 => (Self::Unsupported, 0),
+            7 => return Err(LoadError::InvalidData),
+            8 => {
+                let (obj, len) = <_>::load(&buf[1..])?;
+                (Self::Many(obj), len)
+            }
+            _ => return Err(LoadError::InvalidData),
         };
         result.1 += 1;
-        result
+        Ok(result)
     }
 }
 
 impl Dumpable for Packet {
-    fn dump(&self, buf: &mut [u8]) -> (bool, usize) {
+    fn dump(&self, buf: &mut [u8]) -> Result<usize, DumpError> {
         if buf.len() == 0 {
-            return (false, 0);
+            return Err(DumpError::TooSmallBuffer);
         }
         buf[0] = self.discriminant();
         let mut result = match self {
             Self::Call(c) => c.dump(&mut buf[1..]),
             Self::CallResponse(c) => c.dump(&mut buf[1..]),
-            Self::KeepAlive => (true, 0),
-            Self::Invalid => (true, 0),
+            Self::KeepAlive => Ok(0),
+            Self::Invalid => Ok(0),
             Self::Message(s) => s.dump(&mut buf[1..]),
-            Self::Unsupported => (true, 0),
-            Self::Bad => (false, 0),
+            Self::Unsupported => Ok(0),
+            Self::Bad => return Err(DumpError::Unsupported),
             Self::Many(v) => v.dump(&mut buf[1..]),
-        };
-        result.1 += 1;
-        result
+        }?;
+        result += 1;
+        Ok(result)
     }
 }

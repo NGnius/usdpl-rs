@@ -7,9 +7,11 @@ $0 [decky|crankshaft|<nothing>]"
     elif [ "$1" == "decky" ]; then
         echo "Building back & front for decky framework"
         # usdpl-back
+        echo "...Running usdpl-back build..."
         cd ./usdpl-back
         ./build.sh decky
         # usdpl-front
+        echo "...Running usdpl-front build..."
         cd ../usdpl-front
         ./build.sh decky
         cd ..
@@ -35,11 +37,11 @@ else
     # usdpl-back
     echo "...Running usdpl-back build..."
     cd ./usdpl-back
-    cargo build --release
+    ./build.sh
     # usdpl-front
     echo "...Running usdpl-front build..."
     cd ../usdpl-front
-    ./build.sh crankshaft
+    ./build.sh
     cd ..
     echo "Built usdpl back & front for any"
 fi
