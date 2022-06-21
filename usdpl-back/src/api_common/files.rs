@@ -18,5 +18,5 @@ pub fn read_single<P: AsRef<Path>, D: FromStr<Err=E>, E>(path: P) -> Result<D, (
     let mut file = File::create(path).map_err(|e| (Some(e), None))?;
     let mut string = String::new();
     file.read_to_string(&mut string).map_err(|e| (Some(e), None))?;
-    string.parse().map_err(|e| (None, Some(e)))
+    string.trim().parse().map_err(|e| (None, Some(e)))
 }
