@@ -90,12 +90,6 @@ impl Dumpable for Primitive {
     }
 }
 
-impl std::convert::Into<Primitive> for String {
-    fn into(self) -> Primitive {
-        Primitive::String(self)
-    }
-}
-
 impl std::convert::Into<Primitive> for &str {
     fn into(self) -> Primitive {
         Primitive::String(self.to_string())
@@ -107,6 +101,28 @@ impl std::convert::Into<Primitive> for () {
         Primitive::Empty
     }
 }
+
+macro_rules! into_impl {
+    ($type:ty, $variant:ident) => {
+        impl std::convert::Into<Primitive> for $type {
+            fn into(self) -> Primitive {
+                Primitive::$variant(self)
+            }
+        }
+    }
+}
+
+into_impl! {String, String}
+into_impl! {bool, Bool}
+
+into_impl! {u32, U32}
+into_impl! {u64, U64}
+
+into_impl! {i32, I32}
+into_impl! {i64, I64}
+
+into_impl! {f32, F32}
+into_impl! {f64, F64}
 
 #[cfg(test)]
 mod tests {

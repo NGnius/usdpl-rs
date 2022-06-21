@@ -1,14 +1,15 @@
 //! Universal Steam Deck Plugin Library
 //!
-//! A faster, lighter way to write plugins
+//! A faster, safer way to write plugin back-ends
 //!
 //! ## Goals
 //! - [x] Minimum viable plugin
 //! - [x] Call back-end API from front-end UI
 //! - [x] External API documentation
-//! - [ ] Internal API documentation
+//! - [ ] Internal protocol documentation
 //! - [x] Async support
-//! - [ ] Sync support
+//! - [ ] Encryption
+//! - [ ] Plugin templates
 //! - [ ] PluginLoader/Decky support
 //! - [ ] Crankshaft support
 //! - [ ] Unnamed plugin system support

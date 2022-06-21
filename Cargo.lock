@@ -926,7 +926,7 @@ dependencies = [
 
 [[package]]
 name = "usdpl-back"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "bytes",
  "tokio",
@@ -936,14 +936,14 @@ dependencies = [
 
 [[package]]
 name = "usdpl-core"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "base64",
 ]
 
 [[package]]
 name = "usdpl-front"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",

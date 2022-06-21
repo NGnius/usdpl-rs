@@ -18,7 +18,7 @@ pub async fn send_js(packet: socket::Packet, port: u16) -> Result<Vec<Primitive>
     opts.method("POST");
     opts.mode(RequestMode::Cors);
 
-    let url = format!("http://localhost:{}/usdpl/call", port);
+    let url = format!("http://{}:{}/usdpl/call", socket::HOST_STR, port);
 
     let mut buffer = [0u8; socket::PACKET_BUFFER_SIZE];
     let len = packet
@@ -29,7 +29,7 @@ pub async fn send_js(packet: socket::Packet, port: u16) -> Result<Vec<Primitive>
 
     let request = Request::new_with_str_and_init(&url, &opts)?;
 
-    request.headers().set("Accept", "application/bytes")?;
+    //request.headers().set("Accept", "text/base64")?;
     //.set("Authorization", "wasm TODO_KEY")?;
 
     let window = web_sys::window().unwrap();
