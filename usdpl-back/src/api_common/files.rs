@@ -9,7 +9,7 @@ use std::str::FromStr;
 /// Useful for kernel configuration files.
 pub fn write_single<P: AsRef<Path>, D: Display>(path: P, display: D) -> Result<(), io::Error> {
     let mut file = File::create(path)?;
-    write!(file, "{}\n", display)
+    write!(file, "{}", display)
 }
 
 /// Read something from a file.
