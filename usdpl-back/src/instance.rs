@@ -11,10 +11,15 @@ use super::Callable;
 
 type WrappedCallable = Arc<Mutex<Box<dyn Callable>>>; // thread-safe, cloneable Callable
 
+#[cfg(feature = "encrypt")]
+const NONCE: [u8; socket::NONCE_SIZE] = [0u8; socket::NONCE_SIZE];
+
 /// Back-end instance for interacting with the front-end
 pub struct Instance {
     calls: HashMap<String, WrappedCallable>,
     port: u16,
+    #[cfg(feature = "encrypt")]
+    encryption_key: Vec<u8>,
 }
 
 impl Instance {
@@ -24,6 +29,8 @@ impl Instance {
         Instance {
             calls: HashMap::new(),
             port: port_usdpl,
+            #[cfg(feature = "encrypt")]
+            encryption_key: hex::decode(obfstr::obfstr!(env!("USDPL_ENCRYPTION_KEY"))).unwrap(),
         }
     }
 
@@ -100,6 +107,7 @@ impl Instance {
     async fn serve_internal(&self) -> Result<(), ()> {
         let handlers = self.calls.clone();
         //self.calls = HashMap::new();
+        #[cfg(not(feature = "encrypt"))]
         let calls = warp::post()
             .and(warp::path!("usdpl" / "call"))
             .and(warp::body::content_length_limit(
@@ -130,6 +138,47 @@ impl Instance {
                     }
                 };
                 let string: String = String::from_utf8_lossy(&buffer[..len]).into();
+                warp::reply::with_status(
+                    warp::http::Response::builder().body(string),
+                    warp::http::StatusCode::from_u16(200).unwrap(),
+                )
+            })
+            .map(|reply| warp::reply::with_header(reply, "Access-Control-Allow-Origin", "*"));
+        #[cfg(feature = "encrypt")]
+        let key = self.encryption_key.clone();
+        #[cfg(feature = "encrypt")]
+        let calls = warp::post()
+            .and(warp::path!("usdpl" / "call"))
+            .and(warp::body::content_length_limit(
+                (socket::PACKET_BUFFER_SIZE * 2) as _,
+            ))
+            .and(warp::body::bytes())
+            .map(move |data: bytes::Bytes| {
+                let (packet, _) = match socket::Packet::load_encrypted(&data, &key, &NONCE) {
+                    Ok(x) => x,
+                    Err(_) => {
+                        return warp::reply::with_status(
+                            warp::http::Response::builder()
+                                .body("Failed to load packet".to_string()),
+                            warp::http::StatusCode::from_u16(400).unwrap(),
+                        )
+                    }
+                };
+                let mut buffer = Vec::with_capacity(socket::PACKET_BUFFER_SIZE);
+                buffer.extend(&[0u8; socket::PACKET_BUFFER_SIZE]);
+                let response = Self::handle_call(packet, &handlers);
+                let len = match response.dump_encrypted(&mut buffer, &key, &NONCE) {
+                    Ok(x) => x,
+                    Err(_) => {
+                        return warp::reply::with_status(
+                            warp::http::Response::builder()
+                                .body("Failed to dump response packet".to_string()),
+                            warp::http::StatusCode::from_u16(500).unwrap(),
+                        )
+                    }
+                };
+                buffer.truncate(len);
+                let string: String = String::from_utf8(buffer).unwrap().into();
                 warp::reply::with_status(
                     warp::http::Response::builder().body(string),
                     warp::http::StatusCode::from_u16(200).unwrap(),

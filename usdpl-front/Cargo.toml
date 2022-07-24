@@ -12,10 +12,11 @@ description = "Universal Steam Deck Plugin Library front-end designed for WASM"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = []
+default = ["encrypt"]
 decky = ["usdpl-core/decky"]
 crankshaft = ["usdpl-core/crankshaft"]
 debug = ["console_error_panic_hook"]
+encrypt = ["usdpl-core/encrypt", "obfstr", "hex"]
 
 [dependencies]
 wasm-bindgen = "0.2"
@@ -44,7 +45,10 @@ web-sys = { version = "0.3", features = [
 ]}
 js-sys = { version = "0.3" }
 
-usdpl-core = { version = "0.5.0", path = "../usdpl-core" }
+obfstr = { version = "0.3", optional = true }
+hex = { version = "0.4", optional = true }
+
+usdpl-core = { version = "0.6.0", path = "../usdpl-core" }
 
 [dev-dependencies]
 wasm-bindgen-test = { version = "0.3.13" }

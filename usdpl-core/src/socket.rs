@@ -11,6 +11,8 @@ pub const HOST: Ipv4Addr = Ipv4Addr::new(127, 0, 0, 1);
 
 /// Standard max packet size
 pub const PACKET_BUFFER_SIZE: usize = 1024;
+/// Encryption nonce size
+pub const NONCE_SIZE: usize = 12;
 
 /// Address and port
 #[inline]
@@ -106,5 +108,40 @@ impl Dumpable for Packet {
         }?;
         result += 1;
         Ok(result)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(feature = "encrypt")]
+    #[test]
+    fn encryption_integration_test() {
+        let key = hex_literal::hex!("59C4E408F27250B3147E7724511824F1D28ED7BEF43CF7103ACE747F77A2B265");
+        let nonce = [0u8; NONCE_SIZE];
+        let packet = Packet::Call(RemoteCall{
+            id: 42,
+            function: "test".into(),
+            parameters: Vec::new(),
+        });
+        let mut buffer = Vec::with_capacity(PACKET_BUFFER_SIZE);
+        buffer.extend_from_slice(&[0u8; PACKET_BUFFER_SIZE]);
+        let len = packet.dump_encrypted(&mut buffer, &key, &nonce).unwrap();
+        println!("buffer: {}", String::from_utf8(buffer.as_slice()[..len].to_vec()).unwrap());
+
+        let (packet_out, _len) = Packet::load_encrypted(&buffer.as_slice()[..len], &key, &nonce).unwrap();
+
+        if let Packet::Call(call_out) = packet_out {
+            if let Packet::Call(call_in) = packet {
+                assert_eq!(call_in.id, call_out.id, "Input and output packets do not match");
+                assert_eq!(call_in.function, call_out.function, "Input and output packets do not match");
+                assert_eq!(call_in.parameters.len(), call_out.parameters.len(), "Input and output packets do not match");
+            } else {
+                panic!("Packet in not a Call");
+            }
+        } else {
+            panic!("Packet out not a Call!");
+        }
     }
 }
