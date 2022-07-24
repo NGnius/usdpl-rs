@@ -13,6 +13,7 @@ use web_sys::{Request, RequestInit, RequestMode, Response};
 use usdpl_core::serdes::{Dumpable, Loadable, Primitive};
 use usdpl_core::socket;
 
+#[cfg(feature = "encrypt")]
 const NONCE: [u8; socket::NONCE_SIZE]= [0u8; socket::NONCE_SIZE];
 
 pub async fn send_js(

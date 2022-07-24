@@ -16,7 +16,8 @@ use usdpl_core::{socket::Packet, RemoteCall};
 //const REMOTE_CALL_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 //const REMOTE_PORT: std::sync::atomic::AtomicU16 = std::sync::atomic::AtomicU16::new(31337);
 
-static mut CTX: UsdplContext = UsdplContext { port: 31337, id: 1, key: Vec::new() };
+static mut CTX: UsdplContext = UsdplContext { port: 31337, id: 1, 
+#[cfg(feature = "encrypt")] key: Vec::new() };
 
 #[cfg(feature = "encrypt")]
 fn encryption_key() -> Vec<u8> {
@@ -36,6 +37,7 @@ fn get_port() -> u16 {
     unsafe { CTX.port }
 }
 
+#[cfg(feature = "encrypt")]
 fn get_key() -> Vec<u8> {
     unsafe { CTX.key.clone() }
 }
