@@ -42,7 +42,7 @@ yalc.lock
 .vscode/settings.json
 
 # ignore Rust compiler files
-/backend-rs/target
+/server/target
 backend
 /bin
 
