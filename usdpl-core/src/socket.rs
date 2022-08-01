@@ -1,5 +1,6 @@
 //! Web messaging
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::io::{Read, Write};
 
 use crate::serdes::{DumpError, Dumpable, LoadError, Loadable};
 use crate::{RemoteCall, RemoteCallResponse};
@@ -57,30 +58,29 @@ impl Packet {
 }
 
 impl Loadable for Packet {
-    fn load(buf: &[u8]) -> Result<(Self, usize), LoadError> {
-        if buf.len() == 0 {
-            return Err(LoadError::TooSmallBuffer);
-        }
-        let mut result: (Self, usize) = match buf[0] {
+    fn load(buf: &mut dyn Read) -> Result<(Self, usize), LoadError> {
+        let mut discriminant_buf = [u8::MAX; 1];
+        buf.read_exact(&mut discriminant_buf).map_err(LoadError::Io)?;
+        let mut result: (Self, usize) = match discriminant_buf[0] {
             //0 => (None, 0),
             1 => {
-                let (obj, len) = RemoteCall::load(&buf[1..])?;
+                let (obj, len) = RemoteCall::load(buf)?;
                 (Self::Call(obj), len)
             }
             2 => {
-                let (obj, len) = RemoteCallResponse::load(&buf[1..])?;
+                let (obj, len) = RemoteCallResponse::load(buf)?;
                 (Self::CallResponse(obj), len)
             }
             3 => (Self::KeepAlive, 0),
             4 => (Self::Invalid, 0),
             5 => {
-                let (obj, len) = String::load(&buf[1..])?;
+                let (obj, len) = String::load(buf)?;
                 (Self::Message(obj), len)
             }
             6 => (Self::Unsupported, 0),
             7 => return Err(LoadError::InvalidData),
             8 => {
-                let (obj, len) = <_>::load(&buf[1..])?;
+                let (obj, len) = <_>::load(buf)?;
                 (Self::Many(obj), len)
             }
             _ => return Err(LoadError::InvalidData),
@@ -91,23 +91,19 @@ impl Loadable for Packet {
 }
 
 impl Dumpable for Packet {
-    fn dump(&self, buf: &mut [u8]) -> Result<usize, DumpError> {
-        if buf.len() == 0 {
-            return Err(DumpError::TooSmallBuffer);
-        }
-        buf[0] = self.discriminant();
-        let mut result = match self {
-            Self::Call(c) => c.dump(&mut buf[1..]),
-            Self::CallResponse(c) => c.dump(&mut buf[1..]),
+    fn dump(&self, buf: &mut dyn Write) -> Result<usize, DumpError> {
+        let size1 = buf.write(&[self.discriminant()]).map_err(DumpError::Io)?;
+        let result = match self {
+            Self::Call(c) => c.dump(buf),
+            Self::CallResponse(c) => c.dump(buf),
             Self::KeepAlive => Ok(0),
             Self::Invalid => Ok(0),
-            Self::Message(s) => s.dump(&mut buf[1..]),
+            Self::Message(s) => s.dump(buf),
             Self::Unsupported => Ok(0),
             Self::Bad => return Err(DumpError::Unsupported),
-            Self::Many(v) => v.dump(&mut buf[1..]),
+            Self::Many(v) => v.dump(buf),
         }?;
-        result += 1;
-        Ok(result)
+        Ok(size1 + result)
     }
 }
 
@@ -126,7 +122,6 @@ mod tests {
             parameters: Vec::new(),
         });
         let mut buffer = Vec::with_capacity(PACKET_BUFFER_SIZE);
-        buffer.extend_from_slice(&[0u8; PACKET_BUFFER_SIZE]);
         let len = packet.dump_encrypted(&mut buffer, &key, &nonce).unwrap();
         println!("buffer: {}", String::from_utf8(buffer.as_slice()[..len].to_vec()).unwrap());
 

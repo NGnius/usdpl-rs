@@ -1,88 +1,70 @@
+use std::io::Write;
+
 use super::{DumpError, Dumpable};
 
 impl Dumpable for String {
-    fn dump(&self, buffer: &mut [u8]) -> Result<usize, DumpError> {
+    fn dump(&self, buffer: &mut dyn Write) -> Result<usize, DumpError> {
         let str_bytes = self.as_bytes();
         let len_bytes = (str_bytes.len() as u32).to_le_bytes();
-        let total_len = str_bytes.len() + 4;
-        if buffer.len() < total_len {
-            return Err(DumpError::TooSmallBuffer);
-        }
-        (&mut buffer[..4]).copy_from_slice(&len_bytes);
-        (&mut buffer[4..total_len]).copy_from_slice(str_bytes);
-        Ok(total_len)
+        let size1 = buffer.write(&len_bytes).map_err(DumpError::Io)?;
+        let size2 = buffer.write(&str_bytes).map_err(DumpError::Io)?;
+        Ok(size1 + size2)
     }
 }
 
 impl<T: Dumpable> Dumpable for Vec<T> {
-    fn dump(&self, buffer: &mut [u8]) -> Result<usize, DumpError> {
+    fn dump(&self, buffer: &mut dyn Write) -> Result<usize, DumpError> {
         let len_bytes = (self.len() as u32).to_le_bytes();
-        (&mut buffer[..4]).copy_from_slice(&len_bytes);
-        let mut cursor = 4;
+        let mut total = buffer.write(&len_bytes).map_err(DumpError::Io)?;
         for obj in self.iter() {
-            let len = obj.dump(&mut buffer[cursor..])?;
-            cursor += len;
+            let len = obj.dump(buffer)?;
+            total += len;
         }
-        Ok(cursor)
+        Ok(total)
     }
 }
 
 impl Dumpable for bool {
-    fn dump(&self, buffer: &mut [u8]) -> Result<usize, DumpError> {
-        if buffer.len() < 1 {
-            return Err(DumpError::TooSmallBuffer);
-        }
-        buffer[0] = *self as u8;
-        Ok(1)
+    fn dump(&self, buffer: &mut dyn Write) -> Result<usize, DumpError> {
+        buffer.write(&[*self as u8]).map_err(DumpError::Io)
     }
 }
 
 impl Dumpable for u8 {
-    fn dump(&self, buffer: &mut [u8]) -> Result<usize, DumpError> {
-        if buffer.len() < 1 {
-            return Err(DumpError::TooSmallBuffer);
-        }
-        buffer[0] = *self;
-        Ok(1)
+    fn dump(&self, buffer: &mut dyn Write) -> Result<usize, DumpError> {
+        buffer.write(&[*self]).map_err(DumpError::Io)
     }
 }
 
-impl Dumpable for i8 {
-    fn dump(&self, buffer: &mut [u8]) -> Result<usize, DumpError> {
-        if buffer.len() < 1 {
-            return Err(DumpError::TooSmallBuffer);
-        }
-        buffer[0] = self.to_le_bytes()[0];
-        Ok(1)
+/*impl Dumpable for i8 {
+    fn dump(&self, buffer: &mut dyn Write) -> Result<usize, DumpError> {
+        buffer.write(&self.to_le_bytes()).map_err(DumpError::Io)
     }
-}
+}*/
 
 macro_rules! int_impl {
-    ($type:ty, $size:literal) => {
+    ($type:ty) => {
         impl Dumpable for $type {
-            fn dump(&self, buffer: &mut [u8]) -> Result<usize, DumpError> {
-                if buffer.len() < $size {
-                    return Err(DumpError::TooSmallBuffer);
-                }
-                (&mut buffer[..$size]).copy_from_slice(&self.to_le_bytes());
-                Ok($size)
+            fn dump(&self, buffer: &mut dyn Write) -> Result<usize, DumpError> {
+                buffer.write(&self.to_le_bytes()).map_err(DumpError::Io)
             }
         }
     };
 }
 
-int_impl! {u16, 2}
-int_impl! {u32, 4}
-int_impl! {u64, 8}
-int_impl! {u128, 16}
+int_impl! {u16}
+int_impl! {u32}
+int_impl! {u64}
+int_impl! {u128}
 
-int_impl! {i16, 2}
-int_impl! {i32, 4}
-int_impl! {i64, 8}
-int_impl! {i128, 16}
+int_impl! {i8}
+int_impl! {i16}
+int_impl! {i32}
+int_impl! {i64}
+int_impl! {i128}
 
-int_impl! {f32, 4}
-int_impl! {f64, 8}
+int_impl! {f32}
+int_impl! {f64}
 
 #[cfg(test)]
 mod tests {
@@ -93,10 +75,11 @@ mod tests {
             #[test]
             fn $fn_name() {
                 let data = $data;
-                let mut buffer = [0u8; 128];
+                let mut buffer = Vec::with_capacity(128);
                 let write_len = data.dump(&mut buffer).expect("Dump not ok");
                 assert_eq!(write_len, $expected_len, "Wrong amount written");
                 assert_eq!(&buffer[..write_len], $expected_dump);
+                println!("Dumped {:?}", buffer.as_slice());
             }
         };
     }

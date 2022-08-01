@@ -125,9 +125,10 @@ impl Instance {
                         )
                     }
                 };
-                let mut buffer = [0u8; socket::PACKET_BUFFER_SIZE];
+                //let mut buffer = [0u8; socket::PACKET_BUFFER_SIZE];
+                let mut buffer = String::with_capacity(socket::PACKET_BUFFER_SIZE);
                 let response = Self::handle_call(packet, &handlers);
-                let len = match response.dump_base64(&mut buffer) {
+                let _len = match response.dump_base64(&mut buffer) {
                     Ok(x) => x,
                     Err(_) => {
                         return warp::reply::with_status(
@@ -137,9 +138,8 @@ impl Instance {
                         )
                     }
                 };
-                let string: String = String::from_utf8_lossy(&buffer[..len]).into();
                 warp::reply::with_status(
-                    warp::http::Response::builder().body(string),
+                    warp::http::Response::builder().body(buffer),
                     warp::http::StatusCode::from_u16(200).unwrap(),
                 )
             })
@@ -165,7 +165,7 @@ impl Instance {
                     }
                 };
                 let mut buffer = Vec::with_capacity(socket::PACKET_BUFFER_SIZE);
-                buffer.extend(&[0u8; socket::PACKET_BUFFER_SIZE]);
+                //buffer.extend(&[0u8; socket::PACKET_BUFFER_SIZE]);
                 let response = Self::handle_call(packet, &handlers);
                 let len = match response.dump_encrypted(&mut buffer, &key, &NONCE) {
                     Ok(x) => x,

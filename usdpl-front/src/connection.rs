@@ -80,7 +80,7 @@ pub async fn send_js(
 #[cfg(feature = "encrypt")]
 fn dump_to_buffer(packet: socket::Packet, key: &[u8]) -> Result<(Vec<u8>, usize), JsValue> {
     let mut buffer = Vec::with_capacity(socket::PACKET_BUFFER_SIZE);
-    buffer.extend_from_slice(&[0u8; socket::PACKET_BUFFER_SIZE]);
+    //buffer.extend_from_slice(&[0u8; socket::PACKET_BUFFER_SIZE]);
     let len = packet
         .dump_encrypted(&mut buffer, key, &NONCE)
         .map_err(super::convert::str_to_js)?;
@@ -89,10 +89,10 @@ fn dump_to_buffer(packet: socket::Packet, key: &[u8]) -> Result<(Vec<u8>, usize)
 
 #[cfg(not(feature = "encrypt"))]
 fn dump_to_buffer(packet: socket::Packet) -> Result<(Vec<u8>, usize), JsValue> {
-    let mut buffer = Vec::with_capacity(socket::PACKET_BUFFER_SIZE);
-    buffer.extend_from_slice(&[0u8; socket::PACKET_BUFFER_SIZE]);
+    let mut buffer = String::with_capacity(socket::PACKET_BUFFER_SIZE);
+    //buffer.extend_from_slice(&[0u8; socket::PACKET_BUFFER_SIZE]);
     let len = packet
-        .dump_base64(buffer.as_mut_slice())
+        .dump_base64(&mut buffer)
         .map_err(super::convert::str_to_js)?;
-    Ok((buffer, len))
+    Ok((buffer.as_bytes().to_vec(), len))
 }

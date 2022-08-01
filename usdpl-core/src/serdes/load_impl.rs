@@ -1,32 +1,36 @@
+use std::io::Read;
+
 use super::{LoadError, Loadable};
 
 impl Loadable for String {
-    fn load(buffer: &[u8]) -> Result<(Self, usize), LoadError> {
-        if buffer.len() < 4 {
-            return Err(LoadError::TooSmallBuffer);
-        }
+    fn load(buffer: &mut dyn Read) -> Result<(Self, usize), LoadError> {
         let mut u32_bytes: [u8; 4] = [u8::MAX; 4];
-        u32_bytes.copy_from_slice(&buffer[..4]);
+        buffer.read_exact(&mut u32_bytes).map_err(LoadError::Io)?;
         let str_size = u32::from_le_bytes(u32_bytes) as usize;
+        //let mut str_buf = String::with_capacity(str_size);
+        let mut str_buf = Vec::with_capacity(str_size);
+        let mut byte_buf = [u8::MAX; 1];
+        for _ in 0..str_size {
+            buffer.read_exact(&mut byte_buf).map_err(LoadError::Io)?;
+            str_buf.push(byte_buf[0]);
+        }
+        //let size2 = buffer.read_to_string(&mut str_buf).map_err(LoadError::Io)?;
         Ok((
-            Self::from_utf8_lossy(&buffer[4..str_size + 4]).into_owned(),
+            String::from_utf8(str_buf).map_err(|_| LoadError::InvalidData)?,
             str_size + 4,
         ))
     }
 }
 
 impl<T: Loadable> Loadable for Vec<T> {
-    fn load(buffer: &[u8]) -> Result<(Self, usize), LoadError> {
-        if buffer.len() < 4 {
-            return Err(LoadError::TooSmallBuffer);
-        }
+    fn load(buffer: &mut dyn Read) -> Result<(Self, usize), LoadError> {
         let mut u32_bytes: [u8; 4] = [u8::MAX; 4];
-        u32_bytes.copy_from_slice(&buffer[..4]);
+        buffer.read_exact(&mut u32_bytes).map_err(LoadError::Io)?;
         let count = u32::from_le_bytes(u32_bytes) as usize;
         let mut cursor = 4;
         let mut items = Vec::with_capacity(count);
         for _ in 0..count {
-            let (obj, len) = T::load(&buffer[cursor..])?;
+            let (obj, len) = T::load(buffer)?;
             cursor += len;
             items.push(obj);
         }
@@ -35,41 +39,35 @@ impl<T: Loadable> Loadable for Vec<T> {
 }
 
 impl Loadable for bool {
-    fn load(buffer: &[u8]) -> Result<(Self, usize), LoadError> {
-        if buffer.len() < 1 {
-            return Err(LoadError::TooSmallBuffer);
-        }
-        Ok((buffer[0] != 0, 1))
+    fn load(buffer: &mut dyn Read) -> Result<(Self, usize), LoadError> {
+        let mut byte = [u8::MAX; 1];
+        buffer.read_exact(&mut byte).map_err(LoadError::Io)?;
+        Ok((byte[0] != 0, 1))
     }
 }
 
 impl Loadable for u8 {
-    fn load(buffer: &[u8]) -> Result<(Self, usize), LoadError> {
-        if buffer.len() < 1 {
-            return Err(LoadError::TooSmallBuffer);
-        }
-        Ok((buffer[0], 1))
+    fn load(buffer: &mut dyn Read) -> Result<(Self, usize), LoadError> {
+        let mut byte = [u8::MAX; 1];
+        buffer.read_exact(&mut byte).map_err(LoadError::Io)?;
+        Ok((byte[0], 1))
     }
 }
 
 impl Loadable for i8 {
-    fn load(buffer: &[u8]) -> Result<(Self, usize), LoadError> {
-        if buffer.len() < 1 {
-            return Err(LoadError::TooSmallBuffer);
-        }
-        Ok((i8::from_le_bytes([buffer[0]]), 1))
+    fn load(buffer: &mut dyn Read) -> Result<(Self, usize), LoadError> {
+        let mut byte = [u8::MAX; 1];
+        buffer.read_exact(&mut byte).map_err(LoadError::Io)?;
+        Ok((i8::from_le_bytes(byte), 1))
     }
 }
 
 macro_rules! int_impl {
     ($type:ty, $size:literal) => {
         impl Loadable for $type {
-            fn load(buffer: &[u8]) -> Result<(Self, usize), LoadError> {
-                if buffer.len() < $size {
-                    return Err(LoadError::TooSmallBuffer);
-                }
+            fn load(buffer: &mut dyn Read) -> Result<(Self, usize), LoadError> {
                 let mut bytes: [u8; $size] = [u8::MAX; $size];
-                bytes.copy_from_slice(&buffer[..$size]);
+                buffer.read_exact(&mut bytes).map_err(LoadError::Io)?;
                 let i = <$type>::from_le_bytes(bytes);
                 Ok((i, $size))
             }
@@ -93,15 +91,19 @@ int_impl! {f64, 8}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Cursor;
 
     macro_rules! test_impl {
         ($fn_name:ident, $data:expr, $type:ty, $expected_len:literal, $expected_load:expr) => {
             #[test]
             fn $fn_name() {
-                let buffer = $data;
-                let (obj, read_len) = <$type>::load(&buffer).expect("Load not ok");
+                let buffer_data = $data;
+                let mut buffer = Vec::with_capacity(buffer_data.len());
+                buffer.extend_from_slice(&buffer_data);
+                let (obj, read_len) = <$type>::load(&mut Cursor::new(buffer)).expect("Load not ok");
                 assert_eq!(read_len, $expected_len, "Wrong amount read");
                 assert_eq!(obj, $expected_load, "Loaded value not as expected");
+                println!("Loaded {:?}", obj);
             }
         };
     }

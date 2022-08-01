@@ -1,3 +1,5 @@
+use std::io::{Read, Write};
+
 use crate::serdes::{DumpError, Dumpable, LoadError, Loadable, Primitive};
 
 /// Remote call packet representing a function to call on the back-end, sent from the front-end
@@ -11,10 +13,10 @@ pub struct RemoteCall {
 }
 
 impl Loadable for RemoteCall {
-    fn load(buffer: &[u8]) -> Result<(Self, usize), LoadError> {
+    fn load(buffer: &mut dyn Read) -> Result<(Self, usize), LoadError> {
         let (id_num, len0) = u64::load(buffer)?;
-        let (function_name, len1) = String::load(&buffer[len0..])?;
-        let (params, len2) = Vec::<Primitive>::load(&buffer[len0 + len1..])?;
+        let (function_name, len1) = String::load(buffer)?;
+        let (params, len2) = Vec::<Primitive>::load(buffer)?;
         Ok((
             Self {
                 id: id_num,
@@ -27,10 +29,10 @@ impl Loadable for RemoteCall {
 }
 
 impl Dumpable for RemoteCall {
-    fn dump(&self, buffer: &mut [u8]) -> Result<usize, DumpError> {
+    fn dump(&self, buffer: &mut dyn Write) -> Result<usize, DumpError> {
         let len0 = self.id.dump(buffer)?;
-        let len1 = self.function.dump(&mut buffer[len0..])?;
-        let len2 = self.parameters.dump(&mut buffer[len0 + len1..])?;
+        let len1 = self.function.dump(buffer)?;
+        let len2 = self.parameters.dump(buffer)?;
         Ok(len0 + len1 + len2)
     }
 }
@@ -44,9 +46,9 @@ pub struct RemoteCallResponse {
 }
 
 impl Loadable for RemoteCallResponse {
-    fn load(buffer: &[u8]) -> Result<(Self, usize), LoadError> {
+    fn load(buffer: &mut dyn Read) -> Result<(Self, usize), LoadError> {
         let (id_num, len0) = u64::load(buffer)?;
-        let (response_var, len1) = Vec::<Primitive>::load(&buffer[len0..])?;
+        let (response_var, len1) = Vec::<Primitive>::load(buffer)?;
         Ok((
             Self {
                 id: id_num,
@@ -58,9 +60,9 @@ impl Loadable for RemoteCallResponse {
 }
 
 impl Dumpable for RemoteCallResponse {
-    fn dump(&self, buffer: &mut [u8]) -> Result<usize, DumpError> {
+    fn dump(&self, buffer: &mut dyn Write) -> Result<usize, DumpError> {
         let len0 = self.id.dump(buffer)?;
-        let len1 = self.response.dump(&mut buffer[len0..])?;
+        let len1 = self.response.dump(buffer)?;
         Ok(len0 + len1)
     }
 }
