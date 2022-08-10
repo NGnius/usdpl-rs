@@ -19,6 +19,8 @@ use usdpl_core::{socket::Packet, RemoteCall};
 static mut CTX: UsdplContext = UsdplContext { port: 31337, id: 1, 
 #[cfg(feature = "encrypt")] key: Vec::new() };
 
+static mut CACHE: Option<std::collections::HashMap<String, JsValue>> = None;
+
 #[cfg(feature = "encrypt")]
 fn encryption_key() -> Vec<u8> {
     hex::decode(obfstr::obfstr!(env!("USDPL_ENCRYPTION_KEY"))).unwrap()
@@ -69,12 +71,32 @@ pub fn init_usdpl(port: u16) {
             key: encryption_key(),
         };
     }
+
+    unsafe {
+        CACHE = Some(std::collections::HashMap::new());
+    }
 }
 
 /// Get the targeted plugin framework, or "any" if unknown
 #[wasm_bindgen]
 pub fn target() -> String {
     usdpl_core::api::Platform::current().to_string()
+}
+
+/// Get the targeted plugin framework, or "any" if unknown
+#[wasm_bindgen]
+pub fn set_value(key: String, value: JsValue) -> JsValue {
+    unsafe {
+        CACHE.as_mut().unwrap().insert(key, value).unwrap_or(JsValue::NULL)
+    }
+}
+
+/// Get the targeted plugin framework, or "any" if unknown
+#[wasm_bindgen]
+pub fn get_value(key: String) -> JsValue {
+    unsafe {
+        CACHE.as_ref().unwrap().get(&key).map(|x| x.to_owned()).unwrap_or(JsValue::UNDEFINED)
+    }
 }
 
 /// Call a function on the back-end.
