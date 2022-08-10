@@ -12,7 +12,7 @@ description = "Universal Steam Deck Plugin Library front-end designed for WASM"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = []
+default = ["wee_alloc"]
 decky = ["usdpl-core/decky"]
 crankshaft = ["usdpl-core/crankshaft"]
 debug = ["console_error_panic_hook"]
