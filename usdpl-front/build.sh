@@ -16,7 +16,7 @@ $0 [decky|crankshaft|<nothing>]"
     fi
 else
     echo "WARNING: Building for any plugin framework, which may not work for every framework"
-    RUSTFLAGS="--cfg aes_compact" wasm-pack build --target web
+    RUSTFLAGS="--cfg aes_compact" wasm-pack build --target web --features debug
 fi
 
 python3 ./scripts/generate_embedded_wasm.py

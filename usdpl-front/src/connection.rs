@@ -28,8 +28,11 @@ pub async fn send_js(
 
     let url = format!("http://{}:{}/usdpl/call", socket::HOST_STR, port);
 
+    #[allow(unused_variables)]
     let (buffer, len) = dump_to_buffer(packet, #[cfg(feature = "encrypt")] key.as_slice())?;
-    let string: String = String::from_utf8_lossy(&buffer.as_slice()[..len]).into();
+    let string: String = String::from_utf8_lossy(buffer.as_slice()).into();
+    #[cfg(feature="debug")]
+    crate::imports::console_log(&format!("Dumped base64 `{}` len:{}", string, len));
     opts.body(Some(&string.into()));
 
     let request = Request::new_with_str_and_init(&url, &opts)?;
@@ -44,8 +47,12 @@ pub async fn send_js(
     let text = JsFuture::from(resp.text()?).await?;
     let string: JsString = text.dyn_into()?;
 
+    let rust_str = string.as_string().unwrap();
+    #[cfg(feature="debug")]
+    crate::imports::console_log(&format!("Received base64 `{}` len:{}", rust_str, rust_str.len()));
+
     #[cfg(not(feature = "encrypt"))]
-    match socket::Packet::load_base64(string.as_string().unwrap().as_bytes())
+    match socket::Packet::load_base64(rust_str.as_bytes())
         .map_err(super::convert::str_to_js)?
         .0
     {

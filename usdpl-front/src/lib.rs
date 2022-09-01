@@ -79,8 +79,14 @@ pub fn init_usdpl(port: u16) {
 
 /// Get the targeted plugin framework, or "any" if unknown
 #[wasm_bindgen]
-pub fn target() -> String {
+pub fn target_usdpl() -> String {
     usdpl_core::api::Platform::current().to_string()
+}
+
+/// Get the UDSPL front-end version
+#[wasm_bindgen]
+pub fn version_usdpl() -> String {
+    env!("CARGO_PKG_VERSION").into()
 }
 
 /// Get the targeted plugin framework, or "any" if unknown

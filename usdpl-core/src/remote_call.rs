@@ -66,3 +66,46 @@ impl Dumpable for RemoteCallResponse {
         Ok(len0 + len1)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn remote_call_idempotence_test() {
+        let call = RemoteCall{
+            id: 42,
+            function: "something very long just in case this causes unexpected issues".into(),
+            parameters: vec!["param1".into(), 42f64.into()],
+        };
+
+        let mut buffer = String::with_capacity(crate::socket::PACKET_BUFFER_SIZE);
+        let len = call.dump_base64(&mut buffer).unwrap();
+
+        println!("base64 dumped: `{}` (len: {})", buffer, len);
+
+        let (loaded_call, loaded_len) = RemoteCall::load_base64(buffer.as_bytes()).unwrap();
+        assert_eq!(len, loaded_len, "Expected load and dump lengths to match");
+
+        assert_eq!(loaded_call.id, call.id, "RemoteCall.id does not match");
+        assert_eq!(loaded_call.function, call.function, "RemoteCall.function does not match");
+        if let Primitive::String(loaded) = &loaded_call.parameters[0] {
+            if let Primitive::String(original) = &call.parameters[0] {
+                assert_eq!(loaded, original, "RemoteCall.parameters[0] does not match");
+            } else {
+                panic!("Original call parameter 0 is not String")
+            }
+        } else {
+            panic!("Loaded call parameter 0 is not String")
+        }
+        if let Primitive::F64(loaded) = &loaded_call.parameters[1] {
+            if let Primitive::F64(original) = &call.parameters[1] {
+                assert_eq!(loaded, original, "RemoteCall.parameters[1] does not match");
+            } else {
+                panic!("Original call parameter 1 is not f64")
+            }
+        } else {
+            panic!("Loaded call parameter 1 is not f64")
+        }
+    }
+}

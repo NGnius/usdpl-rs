@@ -117,10 +117,10 @@ impl Instance {
             .map(move |data: bytes::Bytes| {
                 let (packet, _) = match socket::Packet::load_base64(&data) {
                     Ok(x) => x,
-                    Err(_) => {
+                    Err(e) => {
                         return warp::reply::with_status(
                             warp::http::Response::builder()
-                                .body("Failed to load packet".to_string()),
+                                .body(format!("Failed to load packet: {}", e)),
                             warp::http::StatusCode::from_u16(400).unwrap(),
                         )
                     }
@@ -130,10 +130,10 @@ impl Instance {
                 let response = Self::handle_call(packet, &handlers);
                 let _len = match response.dump_base64(&mut buffer) {
                     Ok(x) => x,
-                    Err(_) => {
+                    Err(e) => {
                         return warp::reply::with_status(
                             warp::http::Response::builder()
-                                .body("Failed to dump response packet".to_string()),
+                                .body(format!("Failed to dump response packet: {}", e)),
                             warp::http::StatusCode::from_u16(500).unwrap(),
                         )
                     }
