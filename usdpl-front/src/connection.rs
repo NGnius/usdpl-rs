@@ -17,6 +17,7 @@ use usdpl_core::socket;
 const NONCE: [u8; socket::NONCE_SIZE]= [0u8; socket::NONCE_SIZE];
 
 pub async fn send_js(
+    id: u64,
     packet: socket::Packet,
     port: u16,
     #[cfg(feature = "encrypt")]
@@ -26,7 +27,7 @@ pub async fn send_js(
     opts.method("POST");
     opts.mode(RequestMode::Cors);
 
-    let url = format!("http://{}:{}/usdpl/call", socket::HOST_STR, port);
+    let url = format!("http://usdpl{}.{}:{}/usdpl/call", id, socket::HOST_STR, port);
 
     #[allow(unused_variables)]
     let (buffer, len) = dump_to_buffer(packet, #[cfg(feature = "encrypt")] key.as_slice())?;

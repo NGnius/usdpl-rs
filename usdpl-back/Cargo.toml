@@ -1,6 +1,6 @@
 [package]
 name = "usdpl-back"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2021"
 license = "GPL-3.0-only"
 repository = "https://github.com/NGnius/usdpl-rs"
@@ -17,10 +17,16 @@ encrypt = ["usdpl-core/encrypt", "obfstr", "hex"]
 [dependencies]
 usdpl-core = { version = "0.6.0", path = "../usdpl-core"}
 
+log = "0.4"
+
 # HTTP web framework
 warp = { version = "0.3" }
 bytes = { version = "1.1" }
 tokio = { version = "1.19", features = ["rt", "rt-multi-thread"], optional = true }
+
+# this is why people don't like async
+async-trait = "0.1.57"
+async-recursion = "1.0.0"
 
 # encryption helpers
 obfstr = { version = "0.3", optional = true }

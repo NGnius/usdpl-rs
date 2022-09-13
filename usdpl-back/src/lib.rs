@@ -17,7 +17,8 @@ mod callable;
 //mod errors;
 mod instance;
 
-pub use callable::Callable;
+pub use callable::{Callable, MutCallable, AsyncCallable};
+pub(crate) use callable::WrappedCallable;
 pub use instance::Instance;
 //pub use errors::{ServerError, ServerResult};
 

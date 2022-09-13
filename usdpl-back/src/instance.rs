@@ -1,15 +1,13 @@
 use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 use warp::Filter;
 
 use usdpl_core::serdes::{Dumpable, Loadable};
 use usdpl_core::{socket, RemoteCallResponse};
 
-use super::Callable;
+use super::{Callable, MutCallable, AsyncCallable, WrappedCallable};
 
-type WrappedCallable = Arc<Mutex<Box<dyn Callable>>>; // thread-safe, cloneable Callable
+//type WrappedCallable = Arc<Mutex<Box<dyn Callable>>>; // thread-safe, cloneable Callable
 
 #[cfg(feature = "encrypt")]
 const NONCE: [u8; socket::NONCE_SIZE] = [0u8; socket::NONCE_SIZE];
@@ -34,25 +32,36 @@ impl Instance {
         }
     }
 
-    /// Register a function which can be invoked by the front-end, builder style
+    /// Register a thread-safe function which can be invoked by the front-end
     pub fn register<S: std::convert::Into<String>, F: Callable + 'static>(
         mut self,
         name: S,
         f: F,
     ) -> Self {
         self.calls
-            .insert(name.into(), Arc::new(Mutex::new(Box::new(f))));
+            .insert(name.into(), WrappedCallable::new_ref(f));
         self
     }
 
-    /// Register a function which can be invoked by the front-end, object style
-    pub fn register_mut<S: std::convert::Into<String>, F: Callable + 'static>(
-        &mut self,
+    /// Register a thread-unsafe function which can be invoked by the front-end
+    pub fn register_blocking<S: std::convert::Into<String>, F: MutCallable + 'static>(
+        mut self,
         name: S,
         f: F,
-    ) -> &mut Self {
+    ) -> Self {
         self.calls
-            .insert(name.into(), Arc::new(Mutex::new(Box::new(f))));
+            .insert(name.into(), WrappedCallable::new_locking(f));
+        self
+    }
+
+    /// Register a thread-unsafe function which can be invoked by the front-end
+    pub fn register_async<S: std::convert::Into<String>, F: AsyncCallable + 'static>(
+        mut self,
+        name: S,
+        f: F,
+    ) -> Self {
+        self.calls
+            .insert(name.into(), WrappedCallable::new_async(f));
         self
     }
 
@@ -72,18 +81,17 @@ impl Instance {
         self.serve_internal().await
     }
 
-    fn handle_call(
+    #[async_recursion::async_recursion]
+    async fn handle_call(
         packet: socket::Packet,
         handlers: &HashMap<String, WrappedCallable>,
     ) -> socket::Packet {
         match packet {
             socket::Packet::Call(call) => {
+                log::info!("Got USDPL call {} (`{}`, params: {})", call.id, call.function, call.parameters.len());
                 //let handlers = CALLS.lock().expect("Failed to acquire CALLS lock");
                 if let Some(target) = handlers.get(&call.function) {
-                    let result = target
-                        .lock()
-                        .expect("Failed to acquire CALLS.function lock")
-                        .call(call.parameters);
+                    let result = target.call(call.parameters).await;
                     socket::Packet::CallResponse(RemoteCallResponse {
                         id: call.id,
                         response: result,
@@ -95,7 +103,7 @@ impl Instance {
             socket::Packet::Many(packets) => {
                 let mut result = Vec::with_capacity(packets.len());
                 for packet in packets {
-                    result.push(Self::handle_call(packet, handlers));
+                    result.push(Self::handle_call(packet, handlers).await);
                 }
                 socket::Packet::Many(result)
             }
@@ -103,87 +111,88 @@ impl Instance {
         }
     }
 
+    #[cfg(not(feature = "encrypt"))]
+    async fn process_body((data, handlers): (bytes::Bytes, HashMap<String, WrappedCallable>)) -> impl warp::Reply {
+        let (packet, _) = match socket::Packet::load_base64(&data) {
+            Ok(x) => x,
+            Err(e) => {
+                return warp::reply::with_status(
+                    warp::http::Response::builder()
+                        .body(format!("Failed to load packet: {}", e)),
+                    warp::http::StatusCode::from_u16(400).unwrap(),
+                )
+            }
+        };
+        //let mut buffer = [0u8; socket::PACKET_BUFFER_SIZE];
+        let mut buffer = String::with_capacity(socket::PACKET_BUFFER_SIZE);
+        let response = Self::handle_call(packet, &handlers).await;
+        let _len = match response.dump_base64(&mut buffer) {
+            Ok(x) => x,
+            Err(e) => {
+                return warp::reply::with_status(
+                    warp::http::Response::builder()
+                        .body(format!("Failed to dump response packet: {}", e)),
+                    warp::http::StatusCode::from_u16(500).unwrap(),
+                )
+            }
+        };
+        warp::reply::with_status(
+            warp::http::Response::builder().body(buffer),
+            warp::http::StatusCode::from_u16(200).unwrap(),
+        )
+    }
+
+    #[cfg(feature = "encrypt")]
+    async fn process_body((data, handlers, key): (bytes::Bytes, HashMap<String, WrappedCallable>, Vec<u8>)) -> impl warp::Reply {
+        let (packet, _) = match socket::Packet::load_encrypted(&data, &key, &NONCE) {
+            Ok(x) => x,
+            Err(_) => {
+                return warp::reply::with_status(
+                    warp::http::Response::builder()
+                        .body("Failed to load packet".to_string()),
+                    warp::http::StatusCode::from_u16(400).unwrap(),
+                )
+            }
+        };
+        let mut buffer = Vec::with_capacity(socket::PACKET_BUFFER_SIZE);
+        //buffer.extend(&[0u8; socket::PACKET_BUFFER_SIZE]);
+        let response = Self::handle_call(packet, &handlers).await;
+        let len = match response.dump_encrypted(&mut buffer, &key, &NONCE) {
+            Ok(x) => x,
+            Err(_) => {
+                return warp::reply::with_status(
+                    warp::http::Response::builder()
+                        .body("Failed to dump response packet".to_string()),
+                    warp::http::StatusCode::from_u16(500).unwrap(),
+                )
+            }
+        };
+        buffer.truncate(len);
+        let string: String = String::from_utf8(buffer).unwrap().into();
+        warp::reply::with_status(
+            warp::http::Response::builder().body(string),
+            warp::http::StatusCode::from_u16(200).unwrap(),
+        )
+    }
+
     /// Receive and execute callbacks forever
     async fn serve_internal(&self) -> Result<(), ()> {
         let handlers = self.calls.clone();
-        //self.calls = HashMap::new();
         #[cfg(not(feature = "encrypt"))]
-        let calls = warp::post()
-            .and(warp::path!("usdpl" / "call"))
-            .and(warp::body::content_length_limit(
-                (socket::PACKET_BUFFER_SIZE * 2) as _,
-            ))
-            .and(warp::body::bytes())
-            .map(move |data: bytes::Bytes| {
-                let (packet, _) = match socket::Packet::load_base64(&data) {
-                    Ok(x) => x,
-                    Err(e) => {
-                        return warp::reply::with_status(
-                            warp::http::Response::builder()
-                                .body(format!("Failed to load packet: {}", e)),
-                            warp::http::StatusCode::from_u16(400).unwrap(),
-                        )
-                    }
-                };
-                //let mut buffer = [0u8; socket::PACKET_BUFFER_SIZE];
-                let mut buffer = String::with_capacity(socket::PACKET_BUFFER_SIZE);
-                let response = Self::handle_call(packet, &handlers);
-                let _len = match response.dump_base64(&mut buffer) {
-                    Ok(x) => x,
-                    Err(e) => {
-                        return warp::reply::with_status(
-                            warp::http::Response::builder()
-                                .body(format!("Failed to dump response packet: {}", e)),
-                            warp::http::StatusCode::from_u16(500).unwrap(),
-                        )
-                    }
-                };
-                warp::reply::with_status(
-                    warp::http::Response::builder().body(buffer),
-                    warp::http::StatusCode::from_u16(200).unwrap(),
-                )
-            })
-            .map(|reply| warp::reply::with_header(reply, "Access-Control-Allow-Origin", "*"));
+        let input_mapper = move |data: bytes::Bytes| { (data, handlers.clone()) };
         #[cfg(feature = "encrypt")]
         let key = self.encryption_key.clone();
         #[cfg(feature = "encrypt")]
+        let input_mapper = move |data: bytes::Bytes| { (data, handlers.clone(), key.clone()) };
+        //self.calls = HashMap::new();
         let calls = warp::post()
             .and(warp::path!("usdpl" / "call"))
             .and(warp::body::content_length_limit(
                 (socket::PACKET_BUFFER_SIZE * 2) as _,
             ))
             .and(warp::body::bytes())
-            .map(move |data: bytes::Bytes| {
-                let (packet, _) = match socket::Packet::load_encrypted(&data, &key, &NONCE) {
-                    Ok(x) => x,
-                    Err(_) => {
-                        return warp::reply::with_status(
-                            warp::http::Response::builder()
-                                .body("Failed to load packet".to_string()),
-                            warp::http::StatusCode::from_u16(400).unwrap(),
-                        )
-                    }
-                };
-                let mut buffer = Vec::with_capacity(socket::PACKET_BUFFER_SIZE);
-                //buffer.extend(&[0u8; socket::PACKET_BUFFER_SIZE]);
-                let response = Self::handle_call(packet, &handlers);
-                let len = match response.dump_encrypted(&mut buffer, &key, &NONCE) {
-                    Ok(x) => x,
-                    Err(_) => {
-                        return warp::reply::with_status(
-                            warp::http::Response::builder()
-                                .body("Failed to dump response packet".to_string()),
-                            warp::http::StatusCode::from_u16(500).unwrap(),
-                        )
-                    }
-                };
-                buffer.truncate(len);
-                let string: String = String::from_utf8(buffer).unwrap().into();
-                warp::reply::with_status(
-                    warp::http::Response::builder().body(string),
-                    warp::http::StatusCode::from_u16(200).unwrap(),
-                )
-            })
+            .map(input_mapper)
+            .then(Self::process_body)
             .map(|reply| warp::reply::with_header(reply, "Access-Control-Allow-Origin", "*"));
         #[cfg(debug_assertions)]
         warp::serve(calls).run(([0, 0, 0, 0], self.port)).await;

@@ -124,6 +124,7 @@ pub async fn call_backend(name: String, parameters: Vec<JsValue>) -> JsValue {
     #[cfg(feature = "debug")]
     imports::console_log(&format!("USDPL: Got port {}", port));
     let results = connection::send_js(
+        next_id,
         Packet::Call(RemoteCall {
             id: next_id,
             function: name.clone(),
