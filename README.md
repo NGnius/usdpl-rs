@@ -15,10 +15,10 @@ A faster, safer way to write plugin back-ends
 - [ ] Internal protocol documentation
 - [x] Async support
 - [ ] Encryption
-- [ ] Plugin templates
-- [ ] PluginLoader/Decky support
+- [x] PluginLoader/Decky support
+  - [x] Plugin template
 - [ ] Crankshaft support
-- [ ] Unnamed plugin system support
+  - [ ] Plugin template
 - [ ] Cross-framework tooling
 - [ ] Other programming languages support (C bindings)
 
