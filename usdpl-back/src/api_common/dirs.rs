@@ -10,12 +10,16 @@ pub fn home() -> Option<PathBuf> {
                     .args(["gamescope"])
                     .output().ok()?;
     let pid_out_str = String::from_utf8_lossy(pid_out.stdout.as_slice());
-    let pid_str = pid_out_str.split(" ").next()?;
+    //println!("pidof gamescope: {}", pid_out_str);
+    let pid_str = pid_out_str.split(" ").next()?.trim();
+    let uid: String = super::files::read_single(format!("/proc/{}/loginuid", pid_str.trim())).ok()?;
+    //println!("uid: {}", uid);
     //let pid: u32 = pid_str.parse().ok()?;
     let user_info = Command::new("bash")
-                    .args([format!("id `cat /proc/{}/loginuid`", pid_str)])
+                    .args(["-c", &format!("id {}", uid)])
                     .output().ok()?;
     let user_out_str = String::from_utf8_lossy(user_info.stdout.as_slice());
+    println!("loginuid: {}", user_out_str);
     let user_str = user_out_str.split(")").next()?;
     let user = &user_str[user_str.find("(")?+1..];
     Some(Path::new("/home").join(user))

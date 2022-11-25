@@ -1,6 +1,6 @@
 [package]
 name = "usdpl-back"
-version = "0.7.0"
+version = "0.7.1"
 edition = "2021"
 license = "GPL-3.0-only"
 repository = "https://github.com/NGnius/usdpl-rs"
@@ -11,7 +11,7 @@ description = "Universal Steam Deck Plugin Library back-end"
 default = ["blocking"]
 decky = ["usdpl-core/decky"]
 crankshaft = ["usdpl-core/crankshaft"]
-blocking = ["tokio"] # synchronous API for async functionality, using tokio
+blocking = ["tokio", "tokio/rt", "tokio/rt-multi-thread"] # synchronous API for async functionality, using tokio
 encrypt = ["usdpl-core/encrypt", "obfstr", "hex"]
 
 [dependencies]
@@ -22,7 +22,7 @@ log = "0.4"
 # HTTP web framework
 warp = { version = "0.3" }
 bytes = { version = "1.1" }
-tokio = { version = "1.19", features = ["rt", "rt-multi-thread"], optional = true }
+tokio = { version = "1", optional = true }
 
 # this is why people don't like async
 async-trait = "0.1.57"
