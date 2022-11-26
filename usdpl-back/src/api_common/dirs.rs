@@ -19,7 +19,7 @@ pub fn home() -> Option<PathBuf> {
                     .args(["-c", &format!("id {}", uid)])
                     .output().ok()?;
     let user_out_str = String::from_utf8_lossy(user_info.stdout.as_slice());
-    println!("loginuid: {}", user_out_str);
+    //println!("loginuid: {}", user_out_str);
     let user_str = user_out_str.split(")").next()?;
     let user = &user_str[user_str.find("(")?+1..];
     Some(Path::new("/home").join(user))
