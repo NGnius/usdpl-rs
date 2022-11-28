@@ -1,6 +1,6 @@
 [package]
 name = "usdpl-back"
-version = "0.7.1"
+version = "0.7.2"
 edition = "2021"
 license = "GPL-3.0-only"
 repository = "https://github.com/NGnius/usdpl-rs"

@@ -6,21 +6,32 @@ use std::process::Command;
 
 /// The home directory of the user currently running the Steam Deck UI (specifically: running gamescope).
 pub fn home() -> Option<PathBuf> {
-    let pid_out = Command::new("pidof")
-                    .args(["gamescope"])
+    let who_out = Command::new("who")
                     .output().ok()?;
-    let pid_out_str = String::from_utf8_lossy(pid_out.stdout.as_slice());
-    //println!("pidof gamescope: {}", pid_out_str);
-    let pid_str = pid_out_str.split(" ").next()?.trim();
-    let uid: String = super::files::read_single(format!("/proc/{}/loginuid", pid_str.trim())).ok()?;
-    //println!("uid: {}", uid);
-    //let pid: u32 = pid_str.parse().ok()?;
-    let user_info = Command::new("bash")
-                    .args(["-c", &format!("id {}", uid)])
-                    .output().ok()?;
-    let user_out_str = String::from_utf8_lossy(user_info.stdout.as_slice());
-    //println!("loginuid: {}", user_out_str);
-    let user_str = user_out_str.split(")").next()?;
-    let user = &user_str[user_str.find("(")?+1..];
-    Some(Path::new("/home").join(user))
+    let who_str = String::from_utf8_lossy(who_out.stdout.as_slice());
+    for login in who_str.split("\n") {
+        let username = login
+                        .split(" ")
+                        .next()?
+                        .trim();
+        let path = Path::new("/home").join(username);
+        if path.is_dir() {
+            return Some(path);
+        }
+    }
+    None
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn home_test() {
+        let home_opt = home();
+        assert!(home_opt.is_some(), "Expected valid home to be detected");
+        let real_home = home_opt.unwrap();
+        assert!(real_home.exists(), "Received invalid home dir");
+        println!("Home dir detected as {}", real_home.display());
+    }
 }
