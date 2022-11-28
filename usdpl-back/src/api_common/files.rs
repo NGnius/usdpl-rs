@@ -12,11 +12,19 @@ pub fn write_single<P: AsRef<Path>, D: Display>(path: P, display: D) -> Result<(
     write!(file, "{}", display)
 }
 
+/// read_single error
+pub enum ReadError<E> {
+    /// IO Error
+    Io(io::Error),
+    /// String parsing error
+    Parse(E),
+}
+
 /// Read something from a file.
 /// Useful for kernel configuration files.
-pub fn read_single<P: AsRef<Path>, D: FromStr<Err=E>, E>(path: P) -> Result<D, (Option<io::Error>, Option<E>)> {
-    let mut file = File::open(path).map_err(|e| (Some(e), None))?;
+pub fn read_single<P: AsRef<Path>, D: FromStr<Err=E>, E>(path: P) -> Result<D, ReadError<E>> {
+    let mut file = File::open(path).map_err(ReadError::Io)?;
     let mut string = String::new();
-    file.read_to_string(&mut string).map_err(|e| (Some(e), None))?;
-    string.trim().parse().map_err(|e| (None, Some(e)))
+    file.read_to_string(&mut string).map_err(ReadError::Io)?;
+    string.trim().parse().map_err(ReadError::Parse)
 }
