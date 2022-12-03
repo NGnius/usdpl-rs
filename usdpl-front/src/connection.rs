@@ -69,7 +69,7 @@ pub async fn send_js(
     }
 
     #[cfg(feature = "encrypt")]
-    match socket::Packet::load_encrypted(string.as_string().unwrap().as_bytes(), key.as_slice(), &NONCE)
+    match socket::Packet::load_encrypted(rust_str.as_bytes(), key.as_slice(), &NONCE)
         .map_err(super::convert::str_to_js)?
         .0
     {
