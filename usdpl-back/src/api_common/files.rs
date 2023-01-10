@@ -13,11 +13,25 @@ pub fn write_single<P: AsRef<Path>, D: Display>(path: P, display: D) -> Result<(
 }
 
 /// read_single error
+#[derive(Debug)]
 pub enum ReadError<E> {
     /// IO Error
     Io(io::Error),
     /// String parsing error
     Parse(E),
+}
+
+impl<E: std::error::Error> std::fmt::Display for ReadError<E> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Io(io) => write!(f, "io: {}", io),
+            Self::Parse(e) => write!(f, "parse: {}", e),
+        }
+    }
+}
+
+impl<E: std::error::Error> std::error::Error for ReadError<E> {
+
 }
 
 /// Read something from a file.
