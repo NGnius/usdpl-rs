@@ -16,10 +16,17 @@ use usdpl_core::{socket::Packet, RemoteCall};
 //const REMOTE_CALL_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 //const REMOTE_PORT: std::sync::atomic::AtomicU16 = std::sync::atomic::AtomicU16::new(31337);
 
-static mut CTX: UsdplContext = UsdplContext { port: 31337, id: 1, 
-#[cfg(feature = "encrypt")] key: Vec::new() };
+static mut CTX: UsdplContext = UsdplContext {
+    port: 31337,
+    id: 1,
+    #[cfg(feature = "encrypt")]
+    key: Vec::new(),
+};
 
 static mut CACHE: Option<std::collections::HashMap<String, JsValue>> = None;
+
+#[cfg(feature = "translate")]
+static mut TRANSLATIONS: Option<std::collections::HashMap<String, Vec<String>>> = None;
 
 #[cfg(feature = "encrypt")]
 fn encryption_key() -> Vec<u8> {
@@ -51,11 +58,6 @@ fn increment_id() -> u64 {
     }
     current_id
 }
-
-// When the `wee_alloc` feature is enabled, use `wee_alloc` as the global allocator.
-#[cfg(feature = "wee_alloc")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 /// Initialize the front-end library
 #[wasm_bindgen]
@@ -123,7 +125,7 @@ pub async fn call_backend(name: String, parameters: Vec<JsValue>) -> JsValue {
     let port = get_port();
     #[cfg(feature = "debug")]
     imports::console_log(&format!("USDPL: Got port {}", port));
-    let results = connection::send_js(
+    let results = connection::send_call(
         next_id,
         Packet::Call(RemoteCall {
             id: next_id,
@@ -151,4 +153,67 @@ pub async fn call_backend(name: String, parameters: Vec<JsValue>) -> JsValue {
         i += 1;
     }
     results_js.into()
+}
+
+/// Initialize translation strings for the front-end
+#[wasm_bindgen]
+pub async fn init_tr(locale: String) {
+    let next_id = increment_id();
+    match connection::send_recv_packet(
+        next_id,
+        Packet::Language(locale.clone()),
+        get_port(),
+        #[cfg(feature = "encrypt")]
+        get_key()
+    ).await {
+        Ok(Packet::Translations(translations)) => {
+            #[cfg(feature = "debug")]
+            imports::console_log(&format!("USDPL: Got translations for {}", locale));
+            // convert translations into map
+            let mut tr_map = std::collections::HashMap::with_capacity(translations.len());
+            for (key, val) in translations {
+                tr_map.insert(key, val);
+            }
+            unsafe { TRANSLATIONS = Some(tr_map) }
+        },
+        Ok(_) => {
+            #[cfg(feature = "debug")]
+            imports::console_error(&format!("USDPL: Got wrong packet response for init_tr"));
+            unsafe { TRANSLATIONS = None }
+        },
+        #[allow(unused_variables)]
+        Err(e) => {
+            #[cfg(feature = "debug")]
+            imports::console_error(&format!("USDPL: Got wrong error for init_tr: {}", e));
+            unsafe { TRANSLATIONS = None }
+        }
+    }
+}
+
+/// Translate a phrase, equivalent to tr_n(msg_id, 0)
+#[wasm_bindgen]
+pub fn tr(msg_id: String) -> String {
+    if let Some(translations) = unsafe { TRANSLATIONS.as_ref().unwrap().get(&msg_id) } {
+        if let Some(translated) = translations.get(0) {
+            translated.to_owned()
+        } else {
+            msg_id
+        }
+    } else {
+        msg_id
+    }
+}
+
+/// Translate a phrase, retrieving the plural form for `n` items
+#[wasm_bindgen]
+pub fn tr_n(msg_id: String, n: usize) -> String {
+    if let Some(translations) = unsafe { TRANSLATIONS.as_ref().unwrap().get(&msg_id) } {
+        if let Some(translated) = translations.get(n) {
+            translated.to_owned()
+        } else {
+            msg_id
+        }
+    } else {
+        msg_id
+    }
 }

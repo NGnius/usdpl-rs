@@ -16,13 +16,14 @@ use usdpl_core::socket;
 #[cfg(feature = "encrypt")]
 const NONCE: [u8; socket::NONCE_SIZE]= [0u8; socket::NONCE_SIZE];
 
-pub async fn send_js(
+pub async fn send_recv_packet(
     id: u64,
     packet: socket::Packet,
     port: u16,
     #[cfg(feature = "encrypt")]
     key: Vec<u8>,
-) -> Result<Vec<Primitive>, JsValue> {
+) -> Result<socket::Packet, JsValue> {
+
     let mut opts = RequestInit::new();
     opts.method("POST");
     opts.mode(RequestMode::Cors);
@@ -53,34 +54,31 @@ pub async fn send_js(
     crate::imports::console_log(&format!("Received base64 `{}` len:{}", rust_str, rust_str.len()));
 
     #[cfg(not(feature = "encrypt"))]
-    match socket::Packet::load_base64(rust_str.as_bytes())
+    {Ok(socket::Packet::load_base64(rust_str.as_bytes())
         .map_err(super::convert::str_to_js)?
-        .0
-    {
-        socket::Packet::CallResponse(resp) => Ok(resp.response),
-        _ => {
-            //imports::console_warn(&format!("USDPL warning: Got non-call-response message from {}", resp.url()));
-            Err(format!(
-                "Expected call response message from {}, got something else",
-                resp.url()
-            )
-            .into())
-        }
-    }
+        .0)}
 
     #[cfg(feature = "encrypt")]
-    match socket::Packet::load_encrypted(rust_str.as_bytes(), key.as_slice(), &NONCE)
+    {Ok(socket::Packet::load_encrypted(rust_str.as_bytes(), key.as_slice(), &NONCE)
         .map_err(super::convert::str_to_js)?
-        .0
+        .0)}
+}
+
+pub async fn send_call(
+    id: u64,
+    packet: socket::Packet,
+    port: u16,
+    #[cfg(feature = "encrypt")]
+    key: Vec<u8>,
+) -> Result<Vec<Primitive>, JsValue> {
+    let packet = send_recv_packet(id, packet, port, #[cfg(feature = "encrypt")] key).await?;
+
+    match packet
     {
         socket::Packet::CallResponse(resp) => Ok(resp.response),
         _ => {
             //imports::console_warn(&format!("USDPL warning: Got non-call-response message from {}", resp.url()));
-            Err(format!(
-                "Expected call response message from {}, got something else",
-                resp.url()
-            )
-            .into())
+            Err("Expected call response message, got something else".into())
         }
     }
 }

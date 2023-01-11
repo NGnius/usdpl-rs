@@ -118,14 +118,16 @@ impl Instance {
                 } else {
                     socket::Packet::Invalid
                 }
-            }
+            },
             socket::Packet::Many(packets) => {
                 let mut result = Vec::with_capacity(packets.len());
                 for packet in packets {
                     result.push(Self::handle_call(packet, handlers).await);
                 }
                 socket::Packet::Many(result)
-            }
+            },
+            #[cfg(feature = "translate")]
+            socket::Packet::Language(lang) => socket::Packet::Translations(get_all_translations(lang)),
             _ => socket::Packet::Invalid,
         }
     }
@@ -219,6 +221,32 @@ impl Instance {
         warp::serve(calls).run(([127, 0, 0, 1], self.port)).await;
         Ok(())
     }
+}
+
+#[cfg(feature = "translate")]
+fn get_all_translations(language: String) -> Vec<(String, Vec<String>)> {
+    log::debug!("Loading translations for language `{}`...", language);
+    let result = load_locale(&language);
+    match result {
+        Ok(catalog) => {
+            let map = catalog.nalltext();
+            let mut result = Vec::with_capacity(map.len());
+            for (key, val) in map.iter() {
+                result.push((key.to_owned().into(), val.iter().map(|x| x.into()).collect()));
+            }
+            result
+        },
+        Err(e) => {
+            log::error!("Failed to load translations for language `{}`: {}", language, e);
+            vec![]
+        }
+    }
+}
+
+#[cfg(feature = "translate")]
+fn load_locale(lang: &str) -> Result<gettext_ng::Catalog, gettext_ng::Error> {
+    let file = std::fs::File::open(lang).map_err(|e| gettext_ng::Error::Io(e))?;
+    gettext_ng::Catalog::parse(file)
 }
 
 #[cfg(test)]

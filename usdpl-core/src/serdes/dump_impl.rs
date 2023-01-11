@@ -24,6 +24,48 @@ impl<T: Dumpable> Dumpable for Vec<T> {
     }
 }
 
+impl<T0: Dumpable, T1: Dumpable> Dumpable for (T0, T1) {
+    fn dump(&self, buffer: &mut dyn Write) -> Result<usize, DumpError> {
+        Ok(
+            self.0.dump(buffer)?
+            + self.1.dump(buffer)?
+        )
+    }
+}
+
+impl<T0: Dumpable, T1: Dumpable, T2: Dumpable> Dumpable for (T0, T1, T2) {
+    fn dump(&self, buffer: &mut dyn Write) -> Result<usize, DumpError> {
+        Ok(
+            self.0.dump(buffer)?
+            + self.1.dump(buffer)?
+            + self.2.dump(buffer)?
+        )
+    }
+}
+
+impl<T0: Dumpable, T1: Dumpable, T2: Dumpable, T3: Dumpable> Dumpable for (T0, T1, T2, T3) {
+    fn dump(&self, buffer: &mut dyn Write) -> Result<usize, DumpError> {
+        Ok(
+            self.0.dump(buffer)?
+            + self.1.dump(buffer)?
+            + self.2.dump(buffer)?
+            + self.3.dump(buffer)?
+        )
+    }
+}
+
+impl<T0: Dumpable, T1: Dumpable, T2: Dumpable, T3: Dumpable, T4: Dumpable> Dumpable for (T0, T1, T2, T3, T4) {
+    fn dump(&self, buffer: &mut dyn Write) -> Result<usize, DumpError> {
+        Ok(
+            self.0.dump(buffer)?
+            + self.1.dump(buffer)?
+            + self.2.dump(buffer)?
+            + self.3.dump(buffer)?
+            + self.4.dump(buffer)?
+        )
+    }
+}
+
 impl Dumpable for bool {
     fn dump(&self, buffer: &mut dyn Write) -> Result<usize, DumpError> {
         buffer.write(&[*self as u8]).map_err(DumpError::Io)
@@ -96,6 +138,11 @@ mod tests {
         26,
         &[3, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 116, 101, 115, 116, 49, 5, 0, 0, 0, 116, 101, 115, 116, 50]
     }
+
+    test_impl! {tuple2_dump_test, (0u8, 1u8), 2, &[0, 1]}
+    test_impl! {tuple3_dump_test, (0u8, 1u8, 2u8), 3, &[0, 1, 2]}
+    test_impl! {tuple4_dump_test, (0u8, 1u8, 2u8, 3u8), 4, &[0, 1, 2, 3]}
+    test_impl! {tuple5_dump_test, (0u8, 1u8, 2u8, 3u8, 4u8), 5, &[0, 1, 2, 3, 4]}
 
     test_impl! {bool_true_dump_test, true, 1, &[1]}
     test_impl! {bool_false_dump_test, false, 1, &[0]}

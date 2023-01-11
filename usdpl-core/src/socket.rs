@@ -39,6 +39,12 @@ pub enum Packet {
     Bad,
     /// Many packets merged into one
     Many(Vec<Packet>),
+    /// Translation data dump
+    #[cfg(feature = "translate")]
+    Translations(Vec<(String, Vec<String>)>),
+    /// Request translations for language
+    #[cfg(feature = "translate")]
+    Language(String),
 }
 
 impl Packet {
@@ -53,6 +59,10 @@ impl Packet {
             Self::Unsupported => 6,
             Self::Bad => 7,
             Self::Many(_) => 8,
+            #[cfg(feature = "translate")]
+            Self::Translations(_) => 9,
+            #[cfg(feature = "translate")]
+            Self::Language(_) => 10,
         }
     }
 }
@@ -82,7 +92,17 @@ impl Loadable for Packet {
             8 => {
                 let (obj, len) = <_>::load(buf)?;
                 (Self::Many(obj), len)
-            }
+            },
+            #[cfg(feature = "translate")]
+            9 => {
+                let (obj, len) = <_>::load(buf)?;
+                (Self::Translations(obj), len)
+            },
+            #[cfg(feature = "translate")]
+            10 => {
+                let (obj, len) = <_>::load(buf)?;
+                (Self::Language(obj), len)
+            },
             _ => return Err(LoadError::InvalidData),
         };
         result.1 += 1;
@@ -102,6 +122,10 @@ impl Dumpable for Packet {
             Self::Unsupported => Ok(0),
             Self::Bad => return Err(DumpError::Unsupported),
             Self::Many(v) => v.dump(buf),
+            #[cfg(feature = "translate")]
+            Self::Translations(tr) => tr.dump(buf),
+            #[cfg(feature = "translate")]
+            Self::Language(l) => l.dump(buf),
         }?;
         Ok(size1 + result)
     }

@@ -1,6 +1,6 @@
 [package]
 name = "usdpl-front"
-version = "0.7.0"
+version = "0.9.0"
 authors = ["NGnius (Graham) <ngniusness@gmail.com>"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -12,11 +12,12 @@ description = "Universal Steam Deck Plugin Library front-end designed for WASM"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = []
+default = ["translate"]
 decky = ["usdpl-core/decky"]
 crankshaft = ["usdpl-core/crankshaft"]
 debug = ["console_error_panic_hook"]
 encrypt = ["usdpl-core/encrypt", "obfstr", "hex"]
+translate = ["usdpl-core/translate"]
 
 [dependencies]
 wasm-bindgen = "0.2"
@@ -27,13 +28,6 @@ wasm-bindgen-futures = "0.4"
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
 # code size when deploying.
 console_error_panic_hook = { version = "0.1.6", optional = true }
-
-# `wee_alloc` is a tiny allocator for wasm that is only ~1K in code size
-# compared to the default allocator's ~10K. It is slower than the default
-# allocator, however.
-#
-# Unfortunately, `wee_alloc` requires nightly Rust when targeting wasm for now.
-wee_alloc = { version = "0.4.5", optional = true }
 
 web-sys = { version = "0.3", features = [
   #'Headers',
@@ -48,7 +42,7 @@ js-sys = { version = "0.3" }
 obfstr = { version = "0.3", optional = true }
 hex = { version = "0.4", optional = true }
 
-usdpl-core = { version = "0.6.0", path = "../usdpl-core" }
+usdpl-core = { version = "0.9.0", path = "../usdpl-core" }
 
 [dev-dependencies]
 wasm-bindgen-test = { version = "0.3.13" }

@@ -1,6 +1,6 @@
 [package]
 name = "usdpl-back"
-version = "0.8.0"
+version = "0.9.0"
 edition = "2021"
 license = "GPL-3.0-only"
 repository = "https://github.com/NGnius/usdpl-rs"
@@ -8,14 +8,15 @@ readme = "README.md"
 description = "Universal Steam Deck Plugin Library back-end"
 
 [features]
-default = ["blocking"]
+default = ["blocking", "translate"]
 decky = ["usdpl-core/decky"]
 crankshaft = ["usdpl-core/crankshaft"]
 blocking = ["tokio", "tokio/rt", "tokio/rt-multi-thread"] # synchronous API for async functionality, using tokio
 encrypt = ["usdpl-core/encrypt", "obfstr", "hex"]
+translate = ["usdpl-core/translate", "gettext-ng"]
 
 [dependencies]
-usdpl-core = { version = "0.6.0", path = "../usdpl-core"}
+usdpl-core = { version = "0.9.0", path = "../usdpl-core"}
 
 log = "0.4"
 
@@ -31,3 +32,6 @@ async-recursion = "1.0.0"
 # encryption helpers
 obfstr = { version = "0.3", optional = true }
 hex = { version = "0.4", optional = true }
+
+# translations
+gettext-ng = { version = "0.4.1", optional = true }
