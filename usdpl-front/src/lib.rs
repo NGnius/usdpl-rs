@@ -9,6 +9,8 @@ mod connection;
 mod convert;
 mod imports;
 
+use std::sync::atomic::{AtomicU64, Ordering};
+
 use js_sys::Array;
 use wasm_bindgen::prelude::*;
 
@@ -18,7 +20,7 @@ use usdpl_core::{socket::Packet, RemoteCall};
 
 static mut CTX: UsdplContext = UsdplContext {
     port: 31337,
-    id: 1,
+    id: AtomicU64::new(0),
     #[cfg(feature = "encrypt")]
     key: Vec::new(),
 };
@@ -37,7 +39,7 @@ fn encryption_key() -> Vec<u8> {
 #[derive(Debug)]
 struct UsdplContext {
     port: u16,
-    id: u64,
+    id: AtomicU64,
     #[cfg(feature = "encrypt")]
     key: Vec<u8>,
 }
@@ -52,11 +54,8 @@ fn get_key() -> Vec<u8> {
 }
 
 fn increment_id() -> u64 {
-    let current_id = unsafe { CTX.id };
-    unsafe {
-        CTX.id += 1;
-    }
-    current_id
+    let atomic = unsafe { &CTX.id };
+    atomic.fetch_add(1, Ordering::SeqCst)
 }
 
 /// Initialize the front-end library
@@ -68,7 +67,7 @@ pub fn init_usdpl(port: u16) {
     unsafe {
         CTX = UsdplContext {
             port: port,
-            id: 1,
+            id: AtomicU64::new(0),
             #[cfg(feature = "encrypt")]
             key: encryption_key(),
         };

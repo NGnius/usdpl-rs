@@ -14,7 +14,7 @@ A faster, safer way to write plugin back-ends
 - [x] External API documentation
 - [ ] Internal protocol documentation
 - [x] Async support
-- [ ] Encryption
+- [x] Encryption
 - [x] PluginLoader/Decky support
   - [x] Plugin template
 - [ ] Crankshaft support

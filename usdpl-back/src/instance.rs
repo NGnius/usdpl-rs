@@ -9,7 +9,7 @@ use usdpl_core::{socket, RemoteCallResponse};
 use super::{Callable, MutCallable, AsyncCallable, WrappedCallable};
 
 static LAST_ID: AtomicU64 = AtomicU64::new(0);
-const MAX_ID_DIFFERENCE: u64 = 5;
+const MAX_ID_DIFFERENCE: u64 = 32;
 
 //type WrappedCallable = Arc<Mutex<Box<dyn Callable>>>; // thread-safe, cloneable Callable
 
@@ -94,11 +94,16 @@ impl Instance {
             socket::Packet::Call(call) => {
                 log::debug!("Got USDPL call {} (`{}`, params: {})", call.id, call.function, call.parameters.len());
                 let last_id = LAST_ID.load(Ordering::SeqCst);
-                if call.id == 0 {
-                    log::info!("Call ID is 0, assuming new connection (resetting last id)");
-                    LAST_ID.store(0, Ordering::SeqCst);
+                if last_id == 0 {
+                    log::info!("Last id is 0, assuming resumed connection (overriding last id)");
+                    LAST_ID.store(call.id, Ordering::SeqCst);
+                } else if call.id < MAX_ID_DIFFERENCE {
+                    log::info!("Call ID is low, assuming new connection (resetting last id)");
+                    LAST_ID.store(call.id, Ordering::SeqCst);
                 } else if call.id > last_id && call.id - last_id < MAX_ID_DIFFERENCE {
                     LAST_ID.store(call.id, Ordering::SeqCst);
+                } else if call.id < last_id && last_id - call.id < MAX_ID_DIFFERENCE {
+                    // Allowed, but don't store new (lower) LAST_ID
                 } else {
                     #[cfg(not(debug_assertions))]
                     {
