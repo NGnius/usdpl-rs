@@ -16,7 +16,7 @@ import { FaShip } from "react-icons/fa";
 
 import logo from "../assets/logo.png";
 
-import {init_usdpl, target, init_embedded, call_backend} from "usdpl-front";
+import {init_usdpl, target_usdpl, init_embedded, call_backend} from "usdpl-front";
 
 const USDPL_PORT: number = 54321;
 
@@ -109,7 +109,7 @@ export default definePlugin((serverApi: ServerAPI) => {
   (async () => {
     await init_embedded();
     init_usdpl(USDPL_PORT);
-    console.log("USDPL started for framework: " + target());
+    console.log("USDPL started for framework: " + target_usdpl());
   })();
 
   return {

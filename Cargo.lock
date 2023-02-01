@@ -72,7 +72,7 @@ version = "0.1.0"
 dependencies = [
  "log",
  "simplelog",
- "usdpl-back 0.7.2",
+ "usdpl-back 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1165,21 +1165,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "usdpl-back"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58928ed65332c30b9b9be5140fcdab97e45db679a5845d829aa26492765272e5"
-dependencies = [
- "async-recursion",
- "async-trait",
- "bytes",
- "hex",
- "log",
- "obfstr",
- "tokio",
- "usdpl-core 0.6.0",
- "warp",
-]
+name = "usdpl"
+version = "0.9.0"
 
 [[package]]
 name = "usdpl-back"
@@ -1198,13 +1185,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "usdpl-core"
-version = "0.6.0"
+name = "usdpl-back"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "862153581fac266458521f49e5906a71c1eee1665cb4c7d71e9586bd34b45394"
+checksum = "e2938cb40ba84ebea44658ebb1e4e0045fca54a562873bacab2ae094abab61ff"
 dependencies = [
- "aes-gcm-siv",
- "base64",
+ "async-recursion",
+ "async-trait",
+ "bytes",
+ "gettext-ng",
+ "log",
+ "tokio",
+ "usdpl-core 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "warp",
 ]
 
 [[package]]
@@ -1214,6 +1207,15 @@ dependencies = [
  "aes-gcm-siv",
  "base64",
  "hex-literal",
+]
+
+[[package]]
+name = "usdpl-core"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3904ca38aca189c68a6bc876cf73de7cc60003476b4e118012ae7eb783c1700"
+dependencies = [
+ "base64",
 ]
 
 [[package]]
@@ -1230,10 +1232,6 @@ dependencies = [
  "wasm-bindgen-test",
  "web-sys",
 ]
-
-[[package]]
-name = "usdpl-rs"
-version = "0.9.0"
 
 [[package]]
 name = "utf-8"

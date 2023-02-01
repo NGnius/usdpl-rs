@@ -6,15 +6,16 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-usdpl-back = { version = "0.7", features = ["decky", "encrypt"] }
+usdpl-back = { version = "0.9" }
 
 # logging
 log = "0.4"
 simplelog = "0.12"
 
-[feature]
+[features]
 default = []
 encrypt = ["usdpl-back/encrypt"]
+decky = ["usdpl-back/decky"]
 
 [profile.release]
 debug = false

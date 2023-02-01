@@ -22,5 +22,8 @@ members = [
     "usdpl-core",
     "usdpl-front",
     "usdpl-back",
+]
+
+exclude = [
     "templates/decky/backend"
 ]
