@@ -1,6 +1,6 @@
 [package]
 name = "usdpl-back"
-version = "0.9.1"
+version = "0.10.0"
 edition = "2021"
 license = "GPL-3.0-only"
 repository = "https://github.com/NGnius/usdpl-rs"
@@ -16,7 +16,7 @@ encrypt = ["usdpl-core/encrypt", "obfstr", "hex"]
 translate = ["usdpl-core/translate", "gettext-ng"]
 
 [dependencies]
-usdpl-core = { version = "0.9.0", path = "../usdpl-core"}
+usdpl-core = { version = "0.10", path = "../usdpl-core"}
 
 log = "0.4"
 

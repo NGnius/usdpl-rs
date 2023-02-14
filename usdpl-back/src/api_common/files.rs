@@ -7,6 +7,7 @@ use std::str::FromStr;
 
 /// Write something to a file.
 /// Useful for kernel configuration files.
+#[inline]
 pub fn write_single<P: AsRef<Path>, D: Display>(path: P, display: D) -> Result<(), io::Error> {
     let mut file = File::create(path)?;
     write!(file, "{}", display)
@@ -36,6 +37,7 @@ impl<E: std::error::Error> std::error::Error for ReadError<E> {
 
 /// Read something from a file.
 /// Useful for kernel configuration files.
+#[inline]
 pub fn read_single<P: AsRef<Path>, D: FromStr<Err=E>, E>(path: P) -> Result<D, ReadError<E>> {
     let mut file = File::open(path).map_err(ReadError::Io)?;
     let mut string = String::new();

@@ -17,8 +17,6 @@ A faster, safer way to write plugin back-ends
 - [x] Encryption
 - [x] PluginLoader/Decky support
   - [x] Plugin template
-- [ ] Crankshaft support
-  - [ ] Plugin template
 - [ ] Cross-framework tooling
 - [ ] Other programming languages support (C bindings)
 

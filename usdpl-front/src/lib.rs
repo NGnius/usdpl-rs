@@ -183,7 +183,7 @@ pub async fn init_tr(locale: String) {
         #[allow(unused_variables)]
         Err(e) => {
             #[cfg(feature = "debug")]
-            imports::console_error(&format!("USDPL: Got wrong error for init_tr: {}", e));
+            imports::console_error(&format!("USDPL: Got wrong error for init_tr: {:#?}", e));
             unsafe { TRANSLATIONS = None }
         }
     }

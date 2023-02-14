@@ -1,6 +1,6 @@
 [package]
 name = "usdpl-front"
-version = "0.9.1"
+version = "0.10.0"
 authors = ["NGnius (Graham) <ngniusness@gmail.com>"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -42,7 +42,7 @@ js-sys = { version = "0.3" }
 obfstr = { version = "0.3", optional = true }
 hex = { version = "0.4", optional = true }
 
-usdpl-core = { version = "0.9.0", path = "../usdpl-core" }
+usdpl-core = { version = "0.10", path = "../usdpl-core" }
 
 [dev-dependencies]
 wasm-bindgen-test = { version = "0.3.13" }
