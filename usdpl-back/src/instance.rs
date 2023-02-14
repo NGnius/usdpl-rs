@@ -250,7 +250,8 @@ fn get_all_translations(language: String) -> Vec<(String, Vec<String>)> {
 
 #[cfg(feature = "translate")]
 fn load_locale(lang: &str) -> Result<gettext_ng::Catalog, gettext_ng::Error> {
-    let file = std::fs::File::open(lang).map_err(|e| gettext_ng::Error::Io(e))?;
+    let path = crate::api::dirs::plugin().unwrap_or_else(|| "".into()).join("translations").join(format!("{}.mo", lang));
+    let file = std::fs::File::open(path).map_err(|e| gettext_ng::Error::Io(e))?;
     gettext_ng::Catalog::parse(file)
 }
 
