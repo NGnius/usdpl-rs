@@ -9,7 +9,12 @@ pub fn home() -> Option<PathBuf> {
     #[cfg(all(feature = "crankshaft", not(any(feature = "decky"))))]
     let result = None; // TODO
     #[cfg(all(feature = "decky", not(any(feature = "crankshaft"))))]
-    let result = crate::api_decky::home().ok().map(|x| x.into());
+    let result = crate::api_decky::home().ok()
+        .map(|x| PathBuf::from(x)
+            .join("..")
+            .canonicalize()
+            .ok()
+        ).flatten();
 
     result
 }
