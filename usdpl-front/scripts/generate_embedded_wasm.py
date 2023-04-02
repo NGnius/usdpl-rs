@@ -25,7 +25,15 @@ function decode() {
   for (var i = 0; i < binaryString.length; i++) {
     bytes[i] = binaryString.charCodeAt(i);
   }
-  return (async function() {return new Response(bytes.buffer);})();
+  return (async function() {
+    return new Response(bytes.buffer, {
+        status: 200,
+        statusText: 'OK',
+        headers: {
+            'Content-Type': 'application/wasm'
+        }
+    });
+  })();
 }
 
 export function init_embedded() {
