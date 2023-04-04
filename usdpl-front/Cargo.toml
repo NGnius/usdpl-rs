@@ -1,6 +1,6 @@
 [package]
 name = "usdpl-front"
-version = "0.10.0"
+version = "0.10.1"
 authors = ["NGnius (Graham) <ngniusness@gmail.com>"]
 edition = "2021"
 license = "GPL-3.0-only"

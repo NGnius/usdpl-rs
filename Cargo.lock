@@ -1076,7 +1076,7 @@ version = "0.10.0"
 
 [[package]]
 name = "usdpl-back"
-version = "0.10.0"
+version = "0.10.1"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -1101,7 +1101,7 @@ dependencies = [
 
 [[package]]
 name = "usdpl-front"
-version = "0.10.0"
+version = "0.10.1"
 dependencies = [
  "console_error_panic_hook",
  "hex",
