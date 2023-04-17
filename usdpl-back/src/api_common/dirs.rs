@@ -6,8 +6,6 @@ use std::path::PathBuf;
 pub fn home() -> Option<PathBuf> {
     #[cfg(not(any(feature = "decky", feature = "crankshaft")))]
     let result = crate::api_any::dirs::home();
-    #[cfg(all(feature = "crankshaft", not(any(feature = "decky"))))]
-    let result = None; // TODO
     #[cfg(all(feature = "decky", not(any(feature = "crankshaft"))))]
     let result = crate::api_decky::home().ok()
         .map(|x| PathBuf::from(x)
@@ -23,8 +21,6 @@ pub fn home() -> Option<PathBuf> {
 pub fn plugin() -> Option<PathBuf> {
     #[cfg(not(any(feature = "decky", feature = "crankshaft")))]
     let result = None; // TODO
-    #[cfg(all(feature = "crankshaft", not(any(feature = "decky"))))]
-    let result = None; // TODO
     #[cfg(all(feature = "decky", not(any(feature = "crankshaft"))))]
     let result = crate::api_decky::plugin_dir().ok().map(|x| x.into());
 
@@ -35,8 +31,6 @@ pub fn plugin() -> Option<PathBuf> {
 pub fn log() -> Option<PathBuf> {
     #[cfg(not(any(feature = "decky", feature = "crankshaft")))]
     let result = crate::api_any::dirs::log();
-    #[cfg(all(feature = "crankshaft", not(any(feature = "decky"))))]
-    let result = None; // TODO
     #[cfg(all(feature = "decky", not(any(feature = "crankshaft"))))]
     let result = crate::api_decky::log_dir().ok().map(|x| x.into());
 

@@ -4,8 +4,6 @@ pub enum Platform {
     Any,
     /// Decky aka PluginLoader platform
     Decky,
-    /// Crankshaft platform
-    Crankshaft,
 }
 
 impl Platform {
@@ -15,10 +13,6 @@ impl Platform {
         #[cfg(all(feature = "decky", not(any(feature = "crankshaft"))))]
         {
             Self::Decky
-        }
-        #[cfg(all(feature = "crankshaft", not(any(feature = "decky"))))]
-        {
-            Self::Crankshaft
         }
         #[cfg(not(any(feature = "decky", feature = "crankshaft")))]
         {
@@ -32,7 +26,6 @@ impl std::fmt::Display for Platform {
         match self {
             Self::Any => write!(f, "any"),
             Self::Decky => write!(f, "decky"),
-            Self::Crankshaft => write!(f, "crankshaft"),
         }
     }
 }

@@ -1,27 +1,27 @@
 [package]
 name = "usdpl-front"
-version = "0.10.1"
+version = "0.11.0"
 authors = ["NGnius (Graham) <ngniusness@gmail.com>"]
 edition = "2021"
 license = "GPL-3.0-only"
 repository = "https://github.com/NGnius/usdpl-rs"
-readme = "README.md"
+readme = "../README.md"
 description = "Universal Steam Deck Plugin Library front-end designed for WASM"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["translate"]
+default = []
 decky = ["usdpl-core/decky"]
-crankshaft = ["usdpl-core/crankshaft"]
 debug = ["console_error_panic_hook"]
 encrypt = ["usdpl-core/encrypt", "obfstr", "hex"]
-translate = ["usdpl-core/translate"]
 
 [dependencies]
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
+gloo-net = { version = "0.2", features = ["websocket"] }
+futures = "0.3"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
@@ -39,10 +39,17 @@ web-sys = { version = "0.3", features = [
 ]}
 js-sys = { version = "0.3" }
 
+async-channel = "1.8"
+
 obfstr = { version = "0.3", optional = true }
 hex = { version = "0.4", optional = true }
 
-usdpl-core = { version = "0.10", path = "../usdpl-core" }
+nrpc = "0.2"
+usdpl-core = { version = "0.11", path = "../usdpl-core" }
+prost = "0.11"
 
 [dev-dependencies]
 wasm-bindgen-test = { version = "0.3.13" }
+
+[build-dependencies]
+usdpl-build = { version = "0.11", path = "../usdpl-build" }

@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package usdpl;
+
+// The translation service
+service DevTools {
+  // Retrieves all translations for the provided 4-letter code
+  rpc Log (LogMessage) returns (Empty);
+}
+
+enum LogLevel {
+    Trace = 0;
+    Debug = 1;
+    Info = 2;
+    Warn = 3;
+    Error = 4;
+}
+
+// The request message containing the log message
+message LogMessage {
+  LogLevel level = 1;
+  string msg = 2;
+}
+
+message Empty {}

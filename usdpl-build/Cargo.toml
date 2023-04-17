@@ -1,0 +1,18 @@
+[package]
+name = "usdpl-build"
+version = "0.11.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+nrpc-build = "0.5"
+prost-build = "0.11"
+prost-types = "0.11"
+
+# code gen
+prettyplease = "0.2"
+quote = "1.0"
+syn = "2.0"
+proc-macro2 = "1.0"
+

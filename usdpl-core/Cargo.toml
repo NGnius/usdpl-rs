@@ -1,22 +1,21 @@
 [package]
 name = "usdpl-core"
-version = "0.10.0"
+version = "0.11.0"
 edition = "2021"
 license = "GPL-3.0-only"
 repository = "https://github.com/NGnius/usdpl-rs"
-readme = "README.md"
+readme = "../README.md"
 description = "Universal Steam Deck Plugin Library core"
 
 [features]
 default = []
 decky = []
-crankshaft = []
 encrypt = ["aes-gcm-siv"]
-translate = []
 
 [dependencies]
 base64 = "0.13"
 aes-gcm-siv = { version = "0.10", optional = true, default-features = false, features = ["alloc", "aes"] }
+# nrpc = "0.2"
 
 [dev-dependencies]
 hex-literal = "0.3.4"

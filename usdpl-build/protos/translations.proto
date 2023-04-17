@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package usdpl;
+
+// The translation service
+service Translations {
+  // Retrieves all translations for the provided 4-letter code
+  rpc GetLanguage (LanguageRequest) returns (TranslationsReply) {}
+}
+
+// The request message containing the language code
+message LanguageRequest {
+  string lang = 1;
+}
+
+// The response message containing all translations for the language
+message TranslationsReply {
+  map<string, string> translations = 1;
+}

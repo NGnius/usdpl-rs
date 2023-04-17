@@ -5,9 +5,15 @@
 //!
 #![warn(missing_docs)]
 
+mod client_handler;
 mod connection;
 mod convert;
 mod imports;
+
+#[allow(missing_docs)] // existence is pain otherwise
+pub mod _nrpc_js_interop {
+    include!(concat!(env!("OUT_DIR"), "/usdpl.rs"));
+}
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -19,7 +25,7 @@ use usdpl_core::{socket::Packet, RemoteCall};
 //const REMOTE_PORT: std::sync::atomic::AtomicU16 = std::sync::atomic::AtomicU16::new(31337);
 
 static mut CTX: UsdplContext = UsdplContext {
-    port: 31337,
+    port: 0,
     id: AtomicU64::new(0),
     #[cfg(feature = "encrypt")]
     key: Vec::new(),
@@ -27,7 +33,6 @@ static mut CTX: UsdplContext = UsdplContext {
 
 static mut CACHE: Option<std::collections::HashMap<String, JsValue>> = None;
 
-#[cfg(feature = "translate")]
 static mut TRANSLATIONS: Option<std::collections::HashMap<String, Vec<String>>> = None;
 
 #[cfg(feature = "encrypt")]
