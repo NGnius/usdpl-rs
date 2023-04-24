@@ -10,7 +10,7 @@ description = "Universal Steam Deck Plugin Library back-end"
 [features]
 default = ["blocking"]
 decky = ["usdpl-core/decky"]
-blocking = ["tokio", "tokio/rt", "tokio/rt-multi-thread"] # synchronous API for async functionality, using tokio
+blocking = [] # synchronous API for async functionality, using tokio
 encrypt = ["usdpl-core/encrypt", "obfstr", "hex"]
 
 [dependencies]
@@ -19,12 +19,16 @@ usdpl-core = { version = "0.11", path = "../usdpl-core"}
 log = "0.4"
 
 # gRPC/protobuf
-nrpc = "0.2"
+nrpc = "0.6"
+async-lock = "2.7"
+
+# websocket framework
+ratchet_rs = { version = "0.3", features = [ "deflate" ] }
 
 # HTTP web framework
-warp = { version = "0.3" }
+#warp = { version = "0.3" }
 bytes = { version = "1.1" }
-tokio = { version = "1", optional = true }
+tokio = { version = "1", features = [ "full" ]}
 
 # this is why people don't like async
 async-trait = "0.1.57"

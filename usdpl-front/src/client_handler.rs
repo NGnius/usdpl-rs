@@ -51,15 +51,17 @@ impl WebSocketHandler {
 #[async_trait::async_trait]
 impl ClientHandler for WebSocketHandler {
     async fn call(&mut self,
+            package: &str,
             service: &str,
             method: &str,
             input: bytes::Bytes,
             output: &mut bytes::BytesMut) -> Result<(), ServiceError> {
         let id = LAST_ID.fetch_add(1, Ordering::SeqCst);
         let url = format!(
-            "ws://usdpl-ws-{}.localhost:{}/{}/{}",
+            "ws://usdpl-ws-{}.localhost:{}/{}.{}/{}",
             id,
             self.port,
+            package,
             service,
             method,
         );

@@ -13,13 +13,12 @@ mod api_crankshaft;
 #[cfg(all(feature = "decky", not(any(feature = "crankshaft"))))]
 mod api_decky;
 
-mod callable;
-//mod errors;
-mod instance;
+mod rpc;
 
-pub use callable::{Callable, MutCallable, AsyncCallable};
-pub(crate) use callable::WrappedCallable;
-pub use instance::Instance;
+//mod errors;
+mod websockets;
+
+pub use websockets::WebsocketServer as Server;
 //pub use errors::{ServerError, ServerResult};
 
 /// USDPL backend API.

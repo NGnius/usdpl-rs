@@ -44,7 +44,7 @@ async-channel = "1.8"
 obfstr = { version = "0.3", optional = true }
 hex = { version = "0.4", optional = true }
 
-nrpc = "0.2"
+nrpc = "0.6"
 usdpl-core = { version = "0.11", path = "../usdpl-core" }
 prost = "0.11"
 
