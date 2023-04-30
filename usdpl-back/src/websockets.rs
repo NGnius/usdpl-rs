@@ -30,6 +30,12 @@ impl WebsocketServer {
         &mut self.services
     }
 
+    /// Register a nRPC service for this server to handle
+    pub fn register<S: nrpc::ServerService + Send + 'static>(mut self, service: S) -> Self {
+        self.services.register(service);
+        self
+    }
+
     /// Run the web server forever, asynchronously
     pub async fn run(&self) -> std::io::Result<()> {
         #[cfg(debug_assertions)]
@@ -44,6 +50,15 @@ impl WebsocketServer {
         }
 
         Ok(())
+    }
+
+    #[cfg(feature = "blocking")]
+    /// Run the server forever, blocking the current thread
+    pub fn run_blocking(self) -> std::io::Result<()> {
+        let runner = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()?;
+        runner.block_on(self.run())
     }
 
     async fn connection_handler(services: ServiceRegistry<'static>, stream: TcpStream) -> Result<(), RatchetError> {

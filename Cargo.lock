@@ -797,6 +797,15 @@ checksum = "e5ce46fe64a9d73be07dcbe690a38ce1b293be448fd8ce1e6c1b8062c9f72c6a"
 [[package]]
 name = "nrpc"
 version = "0.6.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "prost",
+]
+
+[[package]]
+name = "nrpc"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f41caeb65399490c6f68ab2527a833d6f2e9b0d7d5ffc4b062f1484b3fa61cd"
 dependencies = [
@@ -807,11 +816,9 @@ dependencies = [
 
 [[package]]
 name = "nrpc-build"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b598ecce0e6d4b2cb367143696174ae24bff5eb4aeb1d8eccffbfeef75fc68e"
+version = "0.7.0"
 dependencies = [
- "nrpc",
+ "nrpc 0.6.0",
  "prettyplease 0.2.4",
  "proc-macro2",
  "prost-build",
@@ -1495,8 +1502,9 @@ dependencies = [
  "gettext-ng",
  "hex",
  "log",
- "nrpc",
+ "nrpc 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "obfstr",
+ "prost",
  "ratchet_rs",
  "tokio",
  "usdpl-build",
@@ -1535,7 +1543,7 @@ dependencies = [
  "gloo-net",
  "hex",
  "js-sys",
- "nrpc",
+ "nrpc 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "obfstr",
  "prost",
  "usdpl-build",

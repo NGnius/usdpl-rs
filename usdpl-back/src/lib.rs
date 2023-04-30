@@ -43,3 +43,15 @@ pub mod api {
 pub mod core {
     pub use usdpl_core::*;
 }
+
+/// nrpc re-export
+pub mod nrpc {
+    pub use nrpc::*;
+}
+
+/// nRPC-generated exports
+#[allow(missing_docs)]
+#[allow(dead_code)]
+pub mod services {
+    include!(concat!(env!("OUT_DIR"), "/mod.rs"));
+}

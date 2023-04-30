@@ -31,7 +31,7 @@ fn generate_service_methods(service: &Service, fds: &FileDescriptorSet) -> proc_
         let mut params_to_fields = Vec::with_capacity(input_type.field.len());
         for field in &input_type.field {
             //let param_name = quote::format_ident!("val{}", i.to_string());
-            let type_name = translate_type(field, &service.name);
+            let type_name = ProtobufType::from_field(field, &service.name).to_tokens();
             let field_name = quote::format_ident!("{}", field.name.as_ref().expect("Protobuf message field needs a name"));
             input_params.push(quote::quote!{
                 #field_name: #type_name,
@@ -125,15 +125,6 @@ fn find_field<'a>(want_field: &str, descriptor: &'a DescriptorProto) -> Option<&
     None
 }
 
-fn translate_type(field: &FieldDescriptorProto, service: &str) -> proc_macro2::TokenStream {
-    if let Some(type_name) = &field.type_name {
-        translate_type_name(type_name, service)
-    } else {
-        let number = field.r#type.unwrap();
-        translate_type_known(number)
-    }
-}
-
 fn generate_wasm_struct_interop(descriptor: &DescriptorProto, handled_enums: &mut HashSet<String>, handled_types: &mut HashSet<String>, is_response_msg: bool, service: &str) -> proc_macro2::TokenStream {
     let msg_name = quote::format_ident!("{}{}", service, descriptor.name.as_ref().expect("Protobuf message needs a name"));
     let super_msg_name = quote::format_ident!("{}", descriptor.name.as_ref().expect("Protobuf message needs a name"));
@@ -153,35 +144,107 @@ fn generate_wasm_struct_interop(descriptor: &DescriptorProto, handled_enums: &mu
                 let special_fn_from = quote::format_ident!("{}_convert_from", name.split('.').last().unwrap().to_lowercase());
                 let special_fn_into = quote::format_ident!("{}_convert_into", name.split('.').last().unwrap().to_lowercase());
                 let key_field = find_field("key", descriptor).expect("Protobuf map entry has no key field");
-                let key_type = translate_type(&key_field, service);
+                let key_type = ProtobufType::from_field(&key_field, service);
                 let value_field = find_field("value", descriptor).expect("Protobuf map entry has no value field");
-                let value_type = translate_type(&value_field, service);
+                let value_type = ProtobufType::from_field(&value_field, service);
+
+                let key_type_tokens = key_type.to_tokens();
+                let value_type_tokens = value_type.to_tokens();
+
+                let (fn_from, fn_into) = match (key_type, value_type) {
+                    (ProtobufType::String, ProtobufType::String) => (
+                        quote::quote!{
+                            #[inline]
+                            #[allow(dead_code)]
+                            fn #special_fn_from(other: ::std::collections::HashMap<#key_type_tokens, #value_type_tokens>) -> #msg_name {
+                                let map = #msg_name::new();
+                                for (key, val) in other.iter() {
+                                    map.set(&key.into(), &val.into());
+                                }
+                                map
+                            }
+                        },
+                        quote::quote!{
+                            #[inline]
+                            #[allow(dead_code)]
+                            fn #special_fn_into(this: #msg_name) -> ::std::collections::HashMap<#key_type_tokens, #value_type_tokens> {
+                                let mut output = ::std::collections::HashMap::<#key_type_tokens, #value_type_tokens>::new();
+                                this.for_each(&mut |key: ::wasm_bindgen::JsValue, val: ::wasm_bindgen::JsValue| {
+                                    if let Some(key) = key.as_string() {
+                                        if let Some(val) = val.as_string() {
+                                            output.insert(key, val);
+                                        }
+                                    }
+                                });
+                                output
+                            }
+                        }
+                    ),
+                    (ProtobufType::String, ProtobufType::Double | ProtobufType::Float | ProtobufType::Int32| ProtobufType::Int64| ProtobufType::Uint32| ProtobufType::Uint64| ProtobufType::Sint32| ProtobufType::Sint64| ProtobufType::Fixed32| ProtobufType::Fixed64| ProtobufType::Sfixed32| ProtobufType::Sfixed64) => (
+                        quote::quote!{
+                            #[inline]
+                            #[allow(dead_code)]
+                            fn #special_fn_from(other: ::std::collections::HashMap<#key_type_tokens, #value_type_tokens>) -> #msg_name {
+                                let map = #msg_name::new();
+                                for (key, val) in other.iter() {
+                                    map.set(&key.into(), &(val as f64).into());
+                                }
+                                map
+                            }
+                        },
+                        quote::quote!{
+                            #[inline]
+                            #[allow(dead_code)]
+                            fn #special_fn_into(this: #msg_name) -> ::std::collections::HashMap<#key_type_tokens, #value_type_tokens> {
+                                let mut output = ::std::collections::HashMap::<#key_type_tokens, #value_type_tokens>::new();
+                                this.for_each(&mut |key: ::wasm_bindgen::JsValue, val: ::wasm_bindgen::JsValue| {
+                                    if let Some(key) = key.as_string() {
+                                        if let Some(val) = val.as_f64() {
+                                            output.insert(key, val as _);
+                                        }
+                                    }
+                                });
+                                output
+                            }
+                        }
+                    ),
+                    (ProtobufType::String, ProtobufType::Bool) => (
+                        quote::quote!{
+                            #[inline]
+                            #[allow(dead_code)]
+                            fn #special_fn_from(other: ::std::collections::HashMap<#key_type_tokens, #value_type_tokens>) -> #msg_name {
+                                let map = #msg_name::new();
+                                for (key, val) in other.iter() {
+                                    map.set(&key.into(), &(val as f64).into());
+                                }
+                                map
+                            }
+                        },
+                        quote::quote!{
+                            #[inline]
+                            #[allow(dead_code)]
+                            fn #special_fn_into(this: #msg_name) -> ::std::collections::HashMap<#key_type_tokens, #value_type_tokens> {
+                                let mut output = ::std::collections::HashMap::<#key_type_tokens, #value_type_tokens>::new();
+                                this.for_each(&mut |key: ::wasm_bindgen::JsValue, val: ::wasm_bindgen::JsValue| {
+                                    if let Some(key) = key.as_string() {
+                                        if let Some(val) = val.as_bool() {
+                                            output.insert(key, val);
+                                        }
+                                    }
+                                });
+                                output
+                            }
+                        }
+                    ),
+                    (key_type, value_type) => panic!("Unsupported map type map<{:?}, {:?}>", key_type, value_type),
+                };
+
                 return quote::quote!{
                     pub type #msg_name = ::js_sys::Map;
 
-                    #[inline]
-                    #[allow(dead_code)]
-                    fn #special_fn_from(other: ::std::collections::HashMap<#key_type, #value_type>) -> #msg_name {
-                        let map = #msg_name::new();
-                        for (key, val) in other.iter() {
-                            map.set(&key.into(), &val.into());
-                        }
-                        map
-                    }
+                    #fn_from
 
-                    #[inline]
-                    #[allow(dead_code)]
-                    fn #special_fn_into(this: #msg_name) -> ::std::collections::HashMap<#key_type, #value_type> {
-                        let mut output = ::std::collections::HashMap::<#key_type, #value_type>::new();
-                        this.for_each(&mut |key: ::wasm_bindgen::JsValue, val: ::wasm_bindgen::JsValue| {
-                            if let Some(key) = key.as_string() {
-                                if let Some(val) = val.as_string() {
-                                    output.insert(key, val);
-                                }
-                            }
-                        });
-                        output
-                    }
+                    #fn_into
                 }
             }
         } else {
@@ -207,7 +270,7 @@ fn generate_wasm_struct_interop(descriptor: &DescriptorProto, handled_enums: &mu
     if descriptor.field.len() == 1 {
         let field = &descriptor.field[0];
         let field_name = quote::format_ident!("{}", field.name.as_ref().expect("Protobuf message field needs a name"));
-        let type_name = translate_type(field, service);
+        let type_name = ProtobufType::from_field(field, service).to_tokens();
         gen_fields.push(quote::quote!{
             pub #field_name: #type_name,
         });
@@ -267,7 +330,7 @@ fn generate_wasm_struct_interop(descriptor: &DescriptorProto, handled_enums: &mu
     } else {
         for field in &descriptor.field {
             let field_name = quote::format_ident!("{}", field.name.as_ref().expect("Protobuf message field needs a name"));
-            let type_name = translate_type(field, service);
+            let type_name = ProtobufType::from_field(field, service).to_tokens();
             gen_fields.push(quote::quote!{
                 pub #field_name: #type_name,
             });
@@ -357,51 +420,100 @@ fn generate_wasm_struct_interop(descriptor: &DescriptorProto, handled_enums: &mu
 
 }
 
-fn translate_type_name(name: &str, service: &str) -> proc_macro2::TokenStream {
-    match name {
-        "double" => quote::quote!{f64},
-        "float" => quote::quote!{f32},
-        "int32" => quote::quote!{i32},
-        "int64" => quote::quote!{i64},
-        "uint32" => quote::quote!{u32},
-        "uint64" => quote::quote!{u64},
-        "sint32" => quote::quote!{i32},
-        "sint64" => quote::quote!{i64},
-        "fixed32" => quote::quote!{u32},
-        "fixed64" => quote::quote!{u64},
-        "sfixed32" => quote::quote!{i32},
-        "sfixed64" => quote::quote!{i64},
-        "bool" => quote::quote!{bool},
-        "string" => quote::quote!{String},
-        "bytes" => quote::quote!{Vec<u8>},
-        t => {
-            let ident = quote::format_ident!("{}{}", service, t.split('.').last().unwrap());
-            quote::quote!{#ident}
-        },
-    }
+#[derive(Debug)]
+enum ProtobufType {
+    Double,
+    Float,
+    Int32,
+    Int64,
+    Uint32,
+    Uint64,
+    Sint32,
+    Sint64,
+    Fixed32,
+    Fixed64,
+    Sfixed32,
+    Sfixed64,
+    Bool,
+    String,
+    Bytes,
+    Custom(String),
 }
 
-fn translate_type_known(id: i32) -> proc_macro2::TokenStream {
-    match id {
-        //"double" => quote::quote!{f64},
-        //"float" => quote::quote!{f32},
-        //"int32" => quote::quote!{i32},
-        //"int64" => quote::quote!{i64},
-        //"uint32" => quote::quote!{u32},
-        //"uint64" => quote::quote!{u64},
-        //"sint32" => quote::quote!{i32},
-        //"sint64" => quote::quote!{i64},
-        //"fixed32" => quote::quote!{u32},
-        //"fixed64" => quote::quote!{u64},
-        //"sfixed32" => quote::quote!{i32},
-        //"sfixed64" => quote::quote!{i64},
-        //"bool" => quote::quote!{bool},
-        9 => quote::quote!{String},
-        //"bytes" => quote::quote!{Vec<u8>},
-        t => {
-            let ident = quote::format_ident!("UnknownType{}", t.to_string());
-            quote::quote!{#ident}
-        },
+impl ProtobufType {
+    fn from_str(type_name: &str, service: &str) -> Self {
+        match type_name {
+            "double" => Self::Double,
+            "float" => Self::Float,
+            "int32" => Self::Int32,
+            "int64" => Self::Int64,
+            "uint32" => Self::Uint32,
+            "uint64" => Self::Uint64,
+            "sint32" => Self::Sint32,
+            "sint64" => Self::Sint64,
+            "fixed32" => Self::Fixed32,
+            "fixed64" => Self::Fixed64,
+            "sfixed32" => Self::Sfixed32,
+            "sfixed64" => Self::Sfixed64,
+            "bool" => Self::Bool,
+            "string" => Self::String,
+            "bytes" => Self::Bytes,
+            t => Self::Custom(format!("{}{}", service, t.split('.').last().unwrap())),
+        }
+    }
+
+    fn from_id(id: i32) -> Self {
+        match id {
+            //"double" => quote::quote!{f64},
+            //"float" => quote::quote!{f32},
+            //"int32" => quote::quote!{i32},
+            //"int64" => quote::quote!{i64},
+            //"uint32" => quote::quote!{u32},
+            //"uint64" => quote::quote!{u64},
+            //"sint32" => quote::quote!{i32},
+            //"sint64" => quote::quote!{i64},
+            //"fixed32" => quote::quote!{u32},
+            //"fixed64" => quote::quote!{u64},
+            //"sfixed32" => quote::quote!{i32},
+            //"sfixed64" => quote::quote!{i64},
+            //"bool" => quote::quote!{bool},
+            9 => Self::String,
+            //"bytes" => quote::quote!{Vec<u8>},
+            t => Self::Custom(format!("UnknownType{}", t)),
+        }
+    }
+
+    fn from_field(field: &FieldDescriptorProto, service: &str) -> Self {
+        if let Some(type_name) = &field.type_name {
+            Self::from_str(type_name, service)
+        } else {
+            let number = field.r#type.unwrap();
+            Self::from_id(number)
+    }
+    }
+
+    fn to_tokens(&self) -> proc_macro2::TokenStream {
+        match self {
+            Self::Double => quote::quote!{f64},
+            Self::Float => quote::quote!{f32},
+            Self::Int32 => quote::quote!{i32},
+            Self::Int64 => quote::quote!{i64},
+            Self::Uint32 => quote::quote!{u32},
+            Self::Uint64 => quote::quote!{u64},
+            Self::Sint32 => quote::quote!{i32},
+            Self::Sint64 => quote::quote!{i64},
+            Self::Fixed32 => quote::quote!{u32},
+            Self::Fixed64 => quote::quote!{u64},
+            Self::Sfixed32 => quote::quote!{i32},
+            Self::Sfixed64 => quote::quote!{i64},
+            Self::Bool => quote::quote!{bool},
+            Self::String => quote::quote!{String},
+            Self::Bytes => quote::quote!{Vec<u8>},
+            Self::Custom(t) => {
+                let ident = quote::format_ident!("{}", t);
+                quote::quote!{#ident}
+            },
+        }
     }
 }
 
