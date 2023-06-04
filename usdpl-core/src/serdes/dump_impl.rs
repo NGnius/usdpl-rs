@@ -26,43 +26,34 @@ impl<T: Dumpable> Dumpable for Vec<T> {
 
 impl<T0: Dumpable, T1: Dumpable> Dumpable for (T0, T1) {
     fn dump(&self, buffer: &mut dyn Write) -> Result<usize, DumpError> {
-        Ok(
-            self.0.dump(buffer)?
-            + self.1.dump(buffer)?
-        )
+        Ok(self.0.dump(buffer)? + self.1.dump(buffer)?)
     }
 }
 
 impl<T0: Dumpable, T1: Dumpable, T2: Dumpable> Dumpable for (T0, T1, T2) {
     fn dump(&self, buffer: &mut dyn Write) -> Result<usize, DumpError> {
-        Ok(
-            self.0.dump(buffer)?
-            + self.1.dump(buffer)?
-            + self.2.dump(buffer)?
-        )
+        Ok(self.0.dump(buffer)? + self.1.dump(buffer)? + self.2.dump(buffer)?)
     }
 }
 
 impl<T0: Dumpable, T1: Dumpable, T2: Dumpable, T3: Dumpable> Dumpable for (T0, T1, T2, T3) {
     fn dump(&self, buffer: &mut dyn Write) -> Result<usize, DumpError> {
-        Ok(
-            self.0.dump(buffer)?
+        Ok(self.0.dump(buffer)?
             + self.1.dump(buffer)?
             + self.2.dump(buffer)?
-            + self.3.dump(buffer)?
-        )
+            + self.3.dump(buffer)?)
     }
 }
 
-impl<T0: Dumpable, T1: Dumpable, T2: Dumpable, T3: Dumpable, T4: Dumpable> Dumpable for (T0, T1, T2, T3, T4) {
+impl<T0: Dumpable, T1: Dumpable, T2: Dumpable, T3: Dumpable, T4: Dumpable> Dumpable
+    for (T0, T1, T2, T3, T4)
+{
     fn dump(&self, buffer: &mut dyn Write) -> Result<usize, DumpError> {
-        Ok(
-            self.0.dump(buffer)?
+        Ok(self.0.dump(buffer)?
             + self.1.dump(buffer)?
             + self.2.dump(buffer)?
             + self.3.dump(buffer)?
-            + self.4.dump(buffer)?
-        )
+            + self.4.dump(buffer)?)
     }
 }
 

@@ -42,10 +42,7 @@ impl<T0: Loadable, T1: Loadable> Loadable for (T0, T1) {
     fn load(buffer: &mut dyn Read) -> Result<(Self, usize), LoadError> {
         let (t0, len0) = T0::load(buffer)?;
         let (t1, len1) = T1::load(buffer)?;
-        Ok((
-            (t0, t1),
-           len0 + len1
-        ))
+        Ok(((t0, t1), len0 + len1))
     }
 }
 
@@ -54,10 +51,7 @@ impl<T0: Loadable, T1: Loadable, T2: Loadable> Loadable for (T0, T1, T2) {
         let (t0, len0) = T0::load(buffer)?;
         let (t1, len1) = T1::load(buffer)?;
         let (t2, len2) = T2::load(buffer)?;
-        Ok((
-            (t0, t1, t2),
-           len0 + len1 + len2
-        ))
+        Ok(((t0, t1, t2), len0 + len1 + len2))
     }
 }
 
@@ -67,24 +61,20 @@ impl<T0: Loadable, T1: Loadable, T2: Loadable, T3: Loadable> Loadable for (T0, T
         let (t1, len1) = T1::load(buffer)?;
         let (t2, len2) = T2::load(buffer)?;
         let (t3, len3) = T3::load(buffer)?;
-        Ok((
-            (t0, t1, t2, t3),
-           len0 + len1 + len2 + len3
-        ))
+        Ok(((t0, t1, t2, t3), len0 + len1 + len2 + len3))
     }
 }
 
-impl<T0: Loadable, T1: Loadable, T2: Loadable, T3: Loadable, T4: Loadable> Loadable for (T0, T1, T2, T3, T4) {
+impl<T0: Loadable, T1: Loadable, T2: Loadable, T3: Loadable, T4: Loadable> Loadable
+    for (T0, T1, T2, T3, T4)
+{
     fn load(buffer: &mut dyn Read) -> Result<(Self, usize), LoadError> {
         let (t0, len0) = T0::load(buffer)?;
         let (t1, len1) = T1::load(buffer)?;
         let (t2, len2) = T2::load(buffer)?;
         let (t3, len3) = T3::load(buffer)?;
         let (t4, len4) = T4::load(buffer)?;
-        Ok((
-            (t0, t1, t2, t3, t4),
-           len0 + len1 + len2 + len3 + len4
-        ))
+        Ok(((t0, t1, t2, t3, t4), len0 + len1 + len2 + len3 + len4))
     }
 }
 

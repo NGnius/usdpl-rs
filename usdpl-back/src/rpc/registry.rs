@@ -1,6 +1,6 @@
+use async_lock::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
-use async_lock::Mutex;
 
 use nrpc::{ServerService, ServiceError};
 
@@ -19,7 +19,12 @@ impl<'a> ServiceRegistry<'a> {
         format!("{}.{}", package, service)
     }*/
 
-    pub async fn call_descriptor(&self, descriptor: &str, method: &str, data: bytes::Bytes) -> Result<bytes::Bytes, ServiceError> {
+    pub async fn call_descriptor(
+        &self,
+        descriptor: &str,
+        method: &str,
+        data: bytes::Bytes,
+    ) -> Result<bytes::Bytes, ServiceError> {
         if let Some(service) = self.entries.get(descriptor) {
             let mut output = bytes::BytesMut::new();
             let mut service_lock = service.lock_arc().await;
@@ -32,7 +37,8 @@ impl<'a> ServiceRegistry<'a> {
 
     pub fn register<S: ServerService + Send + 'a>(&mut self, service: S) -> &mut Self {
         let key = service.descriptor().to_owned();
-        self.entries.insert(key, Arc::new(Mutex::new(Box::new(service))));
+        self.entries
+            .insert(key, Arc::new(Mutex::new(Box::new(service))));
         self
     }
 

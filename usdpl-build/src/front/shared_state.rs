@@ -7,9 +7,7 @@ pub struct SharedState(Arc<Mutex<SharedProtoData>>);
 
 impl SharedState {
     pub fn new() -> Self {
-        Self(Arc::new(Mutex::new(SharedProtoData {
-            fds: None,
-        })))
+        Self(Arc::new(Mutex::new(SharedProtoData { fds: None })))
     }
 }
 

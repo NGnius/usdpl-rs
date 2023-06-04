@@ -18,10 +18,7 @@ impl WasmProtoPreprocessor {
 
 impl IPreprocessor for WasmProtoPreprocessor {
     fn process(&mut self, fds: &mut FileDescriptorSet) -> proc_macro2::TokenStream {
-        self.shared.lock()
-            .expect("Cannot lock shared state")
-            .fds = Some(fds.clone());
-        quote::quote!{}
+        self.shared.lock().expect("Cannot lock shared state").fds = Some(fds.clone());
+        quote::quote! {}
     }
 }
-

@@ -1,5 +1,5 @@
-use std::io::{Read, Write};
 use super::{DumpError, Dumpable, LoadError, Loadable};
+use std::io::{Read, Write};
 
 /// Primitive types supported for communication between the USDPL back- and front-end.
 /// These are used for sending over the TCP connection.
@@ -47,7 +47,8 @@ impl Primitive {
 impl Loadable for Primitive {
     fn load(buf: &mut dyn Read) -> Result<(Self, usize), LoadError> {
         let mut discriminant_buf = [u8::MAX; 1];
-        buf.read_exact(&mut discriminant_buf).map_err(LoadError::Io)?;
+        buf.read_exact(&mut discriminant_buf)
+            .map_err(LoadError::Io)?;
         let mut result: (Self, usize) = match discriminant_buf[0] {
             //0 => (None, 0),
             1 => (Self::Empty, 0),
@@ -105,7 +106,7 @@ macro_rules! into_impl {
                 Primitive::$variant(self)
             }
         }
-    }
+    };
 }
 
 into_impl! {String, String}

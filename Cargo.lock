@@ -1546,7 +1546,6 @@ dependencies = [
  "nrpc 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "obfstr",
  "prost",
- "usdpl-build",
  "usdpl-core",
  "wasm-bindgen",
  "wasm-bindgen-futures",

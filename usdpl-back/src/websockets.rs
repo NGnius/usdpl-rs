@@ -61,16 +61,19 @@ impl WebsocketServer {
         runner.block_on(self.run())
     }
 
-    async fn connection_handler(services: ServiceRegistry<'static>, stream: TcpStream) -> Result<(), RatchetError> {
+    async fn connection_handler(
+        services: ServiceRegistry<'static>,
+        stream: TcpStream,
+    ) -> Result<(), RatchetError> {
         let upgraded = ratchet_rs::accept_with(
             stream,
             WebSocketConfig::default(),
             DeflateExtProvider::default(),
             ProtocolRegistry::new(["usdpl-nrpc"])?,
         )
-            .await?
-            .upgrade()
-            .await?;
+        .await?
+        .upgrade()
+        .await?;
 
         let request_path = upgraded.request.uri().path();
 
@@ -82,19 +85,27 @@ impl WebsocketServer {
         let mut buf = BytesMut::new();
         loop {
             match websocket.read(&mut buf).await? {
-                Message::Text => return Err(RatchetError::with_cause(ratchet_rs::ErrorKind::Protocol, "Websocket text messages are not accepted")),
+                Message::Text => {
+                    return Err(RatchetError::with_cause(
+                        ratchet_rs::ErrorKind::Protocol,
+                        "Websocket text messages are not accepted",
+                    ))
+                }
                 Message::Binary => {
-                    let response = services.call_descriptor(
-                        descriptor.service,
-                        descriptor.method,
-                        buf.clone().freeze()
-                    )
+                    let response = services
+                        .call_descriptor(
+                            descriptor.service,
+                            descriptor.method,
+                            buf.clone().freeze(),
+                        )
                         .await
-                        .map_err(|e| RatchetError::with_cause(ratchet_rs::ErrorKind::Protocol, e.to_string()))?;
+                        .map_err(|e| {
+                            RatchetError::with_cause(ratchet_rs::ErrorKind::Protocol, e.to_string())
+                        })?;
                     websocket.write_binary(response).await?;
-                },
+                }
                 Message::Ping(x) => websocket.write_pong(x).await?,
-                Message::Pong(_) => {},
+                Message::Pong(_) => {}
                 Message::Close(_) => break,
             }
         }
@@ -106,10 +117,7 @@ impl WebsocketServer {
         if let Some(service) = iter.next() {
             if let Some(method) = iter.next() {
                 if iter.next().is_none() {
-                    return Ok(MethodDescriptor {
-                        service,
-                        method
-                    });
+                    return Ok(MethodDescriptor { service, method });
                 } else {
                     Err("URL path has too many separators")
                 }

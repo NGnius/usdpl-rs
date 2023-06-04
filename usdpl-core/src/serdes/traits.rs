@@ -1,5 +1,5 @@
-use std::io::{Read, Write, Cursor};
 use base64::{decode_config_buf, encode_config_buf, Config};
+use std::io::{Cursor, Read, Write};
 
 const B64_CONF: Config = Config::new(base64::CharacterSet::Standard, true);
 
@@ -49,8 +49,7 @@ pub trait Loadable: Sized {
     /// Load data from a base64-encoded buffer
     fn load_base64(buffer: &[u8]) -> Result<(Self, usize), LoadError> {
         let mut buffer2 = Vec::with_capacity(crate::socket::PACKET_BUFFER_SIZE);
-        decode_config_buf(buffer, B64_CONF, &mut buffer2)
-            .map_err(|_| LoadError::InvalidData)?;
+        decode_config_buf(buffer, B64_CONF, &mut buffer2).map_err(|_| LoadError::InvalidData)?;
         let mut cursor = Cursor::new(buffer2);
         Self::load(&mut cursor)
     }
@@ -66,7 +65,9 @@ pub trait Loadable: Sized {
         base64::decode_config_buf(buffer, B64_CONF, &mut decoded_buf)
             .map_err(|_| LoadError::InvalidData)?;
         //println!("Decoded buf: {:?}", decoded_buf);
-        cipher.decrypt_in_place(nonce, ASSOCIATED_DATA, &mut decoded_buf).map_err(|_| LoadError::DecryptionError)?;
+        cipher
+            .decrypt_in_place(nonce, ASSOCIATED_DATA, &mut decoded_buf)
+            .map_err(|_| LoadError::DecryptionError)?;
         //println!("Decrypted buf: {:?}", decoded_buf);
         let mut cursor = Cursor::new(decoded_buf);
         Self::load(&mut cursor)
@@ -121,7 +122,12 @@ pub trait Dumpable {
 
     /// Dump data as an encrypted base64-encoded buffer
     #[cfg(feature = "encrypt")]
-    fn dump_encrypted(&self, buffer: &mut Vec<u8>, key: &[u8], nonce: &[u8]) -> Result<usize, DumpError> {
+    fn dump_encrypted(
+        &self,
+        buffer: &mut Vec<u8>,
+        key: &[u8],
+        nonce: &[u8],
+    ) -> Result<usize, DumpError> {
         let mut buffer2 = Vec::with_capacity(crate::socket::PACKET_BUFFER_SIZE);
         let size = self.dump(&mut buffer2)?;
         buffer2.truncate(size);
@@ -129,7 +135,9 @@ pub trait Dumpable {
         let key = aes_gcm_siv::Key::from_slice(key);
         let cipher = aes_gcm_siv::Aes256GcmSiv::new(key);
         let nonce = aes_gcm_siv::Nonce::from_slice(nonce);
-        cipher.encrypt_in_place(nonce, ASSOCIATED_DATA, &mut buffer2).map_err(|_| DumpError::EncryptionError)?;
+        cipher
+            .encrypt_in_place(nonce, ASSOCIATED_DATA, &mut buffer2)
+            .map_err(|_| DumpError::EncryptionError)?;
         //println!("Encrypted slice: {:?}", &buffer2);
         let mut base64_buf = String::with_capacity(crate::socket::PACKET_BUFFER_SIZE);
         encode_config_buf(buffer2.as_slice(), B64_CONF, &mut base64_buf);

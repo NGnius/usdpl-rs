@@ -7,12 +7,10 @@ pub fn home() -> Option<PathBuf> {
     #[cfg(not(any(feature = "decky", feature = "crankshaft")))]
     let result = crate::api_any::dirs::home();
     #[cfg(all(feature = "decky", not(any(feature = "crankshaft"))))]
-    let result = crate::api_decky::home().ok()
-        .map(|x| PathBuf::from(x)
-            .join("..")
-            .canonicalize()
-            .ok()
-        ).flatten();
+    let result = crate::api_decky::home()
+        .ok()
+        .map(|x| PathBuf::from(x).join("..").canonicalize().ok())
+        .flatten();
 
     result
 }

@@ -1,20 +1,23 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use nrpc::{ClientHandler, ServiceError, _helpers::bytes, _helpers::async_trait};
-use gloo_net::websocket::{Message, futures::WebSocket};
-use wasm_bindgen_futures::spawn_local;
 use futures::{SinkExt, StreamExt};
+use gloo_net::websocket::{futures::WebSocket, Message};
+use nrpc::{ClientHandler, ServiceError, _helpers::async_trait, _helpers::bytes};
+use wasm_bindgen_futures::spawn_local;
 
 static LAST_ID: AtomicU64 = AtomicU64::new(0);
 
+/// Websocket client.
+/// In most cases, this shouldn't be used directly, but generated code will use this.
 pub struct WebSocketHandler {
-    // TODO
     port: u16,
 }
 
 async fn send_recv_ws(url: String, input: bytes::Bytes) -> Result<Vec<u8>, String> {
     let mut ws = WebSocket::open(&url).map_err(|e| e.to_string())?;
-    ws.send(Message::Bytes(input.into())).await.map_err(|e| e.to_string())?;
+    ws.send(Message::Bytes(input.into()))
+        .await
+        .map_err(|e| e.to_string())?;
 
     read_next_incoming(ws).await
 }
@@ -42,7 +45,7 @@ impl std::fmt::Display for ErrorStr {
 impl std::error::Error for ErrorStr {}
 
 impl WebSocketHandler {
-    #[allow(dead_code)]
+    /// Instantiate the web socket client for connecting on the specified port
     pub fn new(port: u16) -> Self {
         Self { port }
     }
@@ -50,33 +53,29 @@ impl WebSocketHandler {
 
 #[async_trait::async_trait]
 impl ClientHandler for WebSocketHandler {
-    async fn call(&mut self,
-            package: &str,
-            service: &str,
-            method: &str,
-            input: bytes::Bytes,
-            output: &mut bytes::BytesMut) -> Result<(), ServiceError> {
+    async fn call(
+        &mut self,
+        package: &str,
+        service: &str,
+        method: &str,
+        input: bytes::Bytes,
+        output: &mut bytes::BytesMut,
+    ) -> Result<(), ServiceError> {
         let id = LAST_ID.fetch_add(1, Ordering::SeqCst);
         let url = format!(
             "ws://usdpl-ws-{}.localhost:{}/{}.{}/{}",
-            id,
-            self.port,
-            package,
-            service,
-            method,
+            id, self.port, package, service, method,
         );
         let (tx, rx) = async_channel::bounded(1);
         spawn_local(async move {
-            tx.send(send_recv_ws(
-                url,
-                input
-            ).await).await.unwrap_or(());
+            tx.send(send_recv_ws(url, input).await).await.unwrap_or(());
         });
 
         output.extend_from_slice(
-            &rx.recv().await
+            &rx.recv()
+                .await
                 .map_err(|e| ServiceError::Method(Box::new(e)))?
-                .map_err(|e| ServiceError::Method(Box::new(ErrorStr(e))))?
+                .map_err(|e| ServiceError::Method(Box::new(ErrorStr(e))))?,
         );
         Ok(())
     }

@@ -14,26 +14,33 @@ use usdpl_core::serdes::{Dumpable, Loadable, Primitive};
 use usdpl_core::socket;
 
 #[cfg(feature = "encrypt")]
-const NONCE: [u8; socket::NONCE_SIZE]= [0u8; socket::NONCE_SIZE];
+const NONCE: [u8; socket::NONCE_SIZE] = [0u8; socket::NONCE_SIZE];
 
 pub async fn send_recv_packet(
     id: u64,
     packet: socket::Packet,
     port: u16,
-    #[cfg(feature = "encrypt")]
-    key: Vec<u8>,
+    #[cfg(feature = "encrypt")] key: Vec<u8>,
 ) -> Result<socket::Packet, JsValue> {
-
     let mut opts = RequestInit::new();
     opts.method("POST");
     opts.mode(RequestMode::Cors);
 
-    let url = format!("http://usdpl{}.{}:{}/usdpl/call", id, socket::HOST_STR, port);
+    let url = format!(
+        "http://usdpl{}.{}:{}/usdpl/call",
+        id,
+        socket::HOST_STR,
+        port
+    );
 
     #[allow(unused_variables)]
-    let (buffer, len) = dump_to_buffer(packet, #[cfg(feature = "encrypt")] key.as_slice())?;
+    let (buffer, len) = dump_to_buffer(
+        packet,
+        #[cfg(feature = "encrypt")]
+        key.as_slice(),
+    )?;
     let string: String = String::from_utf8_lossy(buffer.as_slice()).into();
-    #[cfg(feature="debug")]
+    #[cfg(feature = "debug")]
     crate::imports::console_log(&format!("Dumped base64 `{}` len:{}", string, len));
     opts.body(Some(&string.into()));
 
@@ -50,31 +57,46 @@ pub async fn send_recv_packet(
     let string: JsString = text.dyn_into()?;
 
     let rust_str = string.as_string().unwrap();
-    #[cfg(feature="debug")]
-    crate::imports::console_log(&format!("Received base64 `{}` len:{}", rust_str, rust_str.len()));
+    #[cfg(feature = "debug")]
+    crate::imports::console_log(&format!(
+        "Received base64 `{}` len:{}",
+        rust_str,
+        rust_str.len()
+    ));
 
     #[cfg(not(feature = "encrypt"))]
-    {Ok(socket::Packet::load_base64(rust_str.as_bytes())
-        .map_err(super::convert::str_to_js)?
-        .0)}
+    {
+        Ok(socket::Packet::load_base64(rust_str.as_bytes())
+            .map_err(super::convert::str_to_js)?
+            .0)
+    }
 
     #[cfg(feature = "encrypt")]
-    {Ok(socket::Packet::load_encrypted(rust_str.as_bytes(), key.as_slice(), &NONCE)
-        .map_err(super::convert::str_to_js)?
-        .0)}
+    {
+        Ok(
+            socket::Packet::load_encrypted(rust_str.as_bytes(), key.as_slice(), &NONCE)
+                .map_err(super::convert::str_to_js)?
+                .0,
+        )
+    }
 }
 
 pub async fn send_call(
     id: u64,
     packet: socket::Packet,
     port: u16,
-    #[cfg(feature = "encrypt")]
-    key: Vec<u8>,
+    #[cfg(feature = "encrypt")] key: Vec<u8>,
 ) -> Result<Vec<Primitive>, JsValue> {
-    let packet = send_recv_packet(id, packet, port, #[cfg(feature = "encrypt")] key).await?;
+    let packet = send_recv_packet(
+        id,
+        packet,
+        port,
+        #[cfg(feature = "encrypt")]
+        key,
+    )
+    .await?;
 
-    match packet
-    {
+    match packet {
         socket::Packet::CallResponse(resp) => Ok(resp.response),
         _ => {
             //imports::console_warn(&format!("USDPL warning: Got non-call-response message from {}", resp.url()));

@@ -17,26 +17,25 @@ const TRANSLATIONS_PROTO: IncludedFileStr<'static> = IncludedFileStr {
     contents: include_str!("../protos/translations.proto"),
 };
 
-const ALL_PROTOS: [IncludedFileStr<'static>; 2] = [
-    DEBUG_PROTO,
-    TRANSLATIONS_PROTO,
-];
+const ALL_PROTOS: [IncludedFileStr<'static>; 2] = [DEBUG_PROTO, TRANSLATIONS_PROTO];
 
 pub fn proto_builtins_out_path() -> PathBuf {
-    PathBuf::from(std::env::var("OUT_DIR").expect("Not in a build.rs context (missing $OUT_DIR)")).join("protos")
+    PathBuf::from(std::env::var("OUT_DIR").expect("Not in a build.rs context (missing $OUT_DIR)"))
+        .join("protos")
 }
 
-pub fn proto_out_paths() -> impl Iterator<Item = String> {
+pub fn proto_out_paths(additionals: impl Iterator<Item = String>) -> impl Iterator<Item = String> {
     std::iter::once(proto_builtins_out_path())
         .map(|x| x.to_str().unwrap().to_owned())
-        .chain(custom_protos_dirs().into_iter())
+        .chain(custom_protos_dirs(additionals).into_iter())
 }
 
-fn custom_protos_dirs() -> Vec<String> {
+fn custom_protos_dirs(additionals: impl Iterator<Item = String>) -> Vec<String> {
     let dirs = std::env::var(ADDITIONAL_PROTOBUFS_ENV_VAR).unwrap_or_else(|_| "".to_owned());
     dirs.split(':')
         .filter(|x| std::fs::read_dir(x).is_ok())
         .map(|x| x.to_owned())
+        .chain(additionals)
         .collect()
 }
 
@@ -48,14 +47,27 @@ fn custom_protos_filenames() -> Vec<String> {
         .flat_map(|x| x.unwrap())
         .filter(|x| x.is_ok())
         .map(|x| x.unwrap().path())
-        .filter(|x| if let Some(ext) = x.extension() { ext.to_ascii_lowercase() == "proto" && x.is_file() } else { false })
+        .filter(|x| {
+            if let Some(ext) = x.extension() {
+                ext.to_ascii_lowercase() == "proto" && x.is_file()
+            } else {
+                false
+            }
+        })
         .filter_map(|x| x.to_str().map(|x| x.to_owned()))
         .collect()
 }
 
-pub fn all_proto_filenames(p: impl AsRef<Path> + 'static) -> impl Iterator<Item = String> {
+pub fn all_proto_filenames(
+    p: impl AsRef<Path> + 'static,
+    additionals: impl Iterator<Item = String>,
+) -> impl Iterator<Item = String> {
     //let p = p.as_ref();
-    ALL_PROTOS.iter().map(move |x| p.as_ref().join(x.filename).to_str().unwrap().to_owned()).chain(custom_protos_filenames())
+    ALL_PROTOS
+        .iter()
+        .map(move |x| p.as_ref().join(x.filename).to_str().unwrap().to_owned())
+        .chain(custom_protos_filenames())
+        .chain(additionals)
 }
 
 pub fn dump_protos(p: impl AsRef<Path>) -> std::io::Result<()> {

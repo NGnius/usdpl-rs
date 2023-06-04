@@ -5,12 +5,10 @@
 //!
 #![warn(missing_docs)]
 
-#[cfg(not(any(feature = "decky", feature = "crankshaft")))]
+#[cfg(not(any(feature = "decky")))]
 mod api_any;
 mod api_common;
-#[cfg(all(feature = "crankshaft", not(any(feature = "decky"))))]
-mod api_crankshaft;
-#[cfg(all(feature = "decky", not(any(feature = "crankshaft"))))]
+#[cfg(all(feature = "decky", not(any(feature = "any"))))]
 mod api_decky;
 
 mod rpc;
@@ -27,16 +25,16 @@ pub mod api {
     pub use super::api_common::*;
 
     /// Standard interfaces not specific to a single plugin loader
-    #[cfg(not(any(feature = "decky", feature = "crankshaft")))]
-    pub mod any { pub use super::super::api_any::*; }
-
-    /// Crankshaft-specific interfaces (FIXME)
-    #[cfg(all(feature = "crankshaft", not(any(feature = "decky"))))]
-    pub mod crankshaft { pub use super::super::api_crankshaft::*; }
+    #[cfg(not(any(feature = "decky")))]
+    pub mod any {
+        pub use super::super::api_any::*;
+    }
 
     /// Decky-specific interfaces
-    #[cfg(all(feature = "decky", not(any(feature = "crankshaft"))))]
-    pub mod decky { pub use super::super::api_decky::*; }
+    #[cfg(all(feature = "decky", not(any(feature = "any"))))]
+    pub mod decky {
+        pub use super::super::api_decky::*;
+    }
 }
 
 /// usdpl-core re-export
@@ -49,9 +47,9 @@ pub mod nrpc {
     pub use nrpc::*;
 }
 
-/// nRPC-generated exports
+/*/// nRPC-generated exports
 #[allow(missing_docs)]
 #[allow(dead_code)]
 pub mod services {
     include!(concat!(env!("OUT_DIR"), "/mod.rs"));
-}
+}*/

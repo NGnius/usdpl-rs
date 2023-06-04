@@ -6,13 +6,22 @@
 #![warn(missing_docs)]
 
 mod client_handler;
+pub use client_handler::WebSocketHandler;
 mod connection;
 mod convert;
 mod imports;
+pub mod wasm;
 
-#[allow(missing_docs)] // existence is pain otherwise
+/*#[allow(missing_docs)] // existence is pain otherwise
 pub mod _nrpc_js_interop {
-    include!(concat!(env!("OUT_DIR"), "/usdpl.rs"));
+    include!(concat!(env!("OUT_DIR"), "/mod.rs"));
+}*/
+
+#[allow(missing_docs)]
+pub mod _helpers {
+    pub use js_sys;
+    pub use wasm_bindgen;
+    pub use wasm_bindgen_futures;
 }
 
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -99,7 +108,11 @@ pub fn version_usdpl() -> String {
 #[wasm_bindgen]
 pub fn set_value(key: String, value: JsValue) -> JsValue {
     unsafe {
-        CACHE.as_mut().unwrap().insert(key, value).unwrap_or(JsValue::NULL)
+        CACHE
+            .as_mut()
+            .unwrap()
+            .insert(key, value)
+            .unwrap_or(JsValue::NULL)
     }
 }
 
@@ -107,7 +120,12 @@ pub fn set_value(key: String, value: JsValue) -> JsValue {
 #[wasm_bindgen]
 pub fn get_value(key: String) -> JsValue {
     unsafe {
-        CACHE.as_ref().unwrap().get(&key).map(|x| x.to_owned()).unwrap_or(JsValue::UNDEFINED)
+        CACHE
+            .as_ref()
+            .unwrap()
+            .get(&key)
+            .map(|x| x.to_owned())
+            .unwrap_or(JsValue::UNDEFINED)
     }
 }
 
@@ -138,7 +156,7 @@ pub async fn call_backend(name: String, parameters: Vec<JsValue>) -> JsValue {
         }),
         port,
         #[cfg(feature = "encrypt")]
-        get_key()
+        get_key(),
     )
     .await;
     let results = match results {
@@ -168,8 +186,10 @@ pub async fn init_tr(locale: String) {
         Packet::Language(locale.clone()),
         get_port(),
         #[cfg(feature = "encrypt")]
-        get_key()
-    ).await {
+        get_key(),
+    )
+    .await
+    {
         Ok(Packet::Translations(translations)) => {
             #[cfg(feature = "debug")]
             imports::console_log(&format!("USDPL: Got translations for {}", locale));
@@ -179,12 +199,12 @@ pub async fn init_tr(locale: String) {
                 tr_map.insert(key, val);
             }
             unsafe { TRANSLATIONS = Some(tr_map) }
-        },
+        }
         Ok(_) => {
             #[cfg(feature = "debug")]
             imports::console_error(&format!("USDPL: Got wrong packet response for init_tr"));
             unsafe { TRANSLATIONS = None }
-        },
+        }
         #[allow(unused_variables)]
         Err(e) => {
             #[cfg(feature = "debug")]

@@ -22,4 +22,6 @@ message LogMessage {
   string msg = 2;
 }
 
-message Empty {}
+message Empty {
+  bool ok = 1;
+}

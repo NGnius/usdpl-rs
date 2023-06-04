@@ -1,6 +1,6 @@
 //! Web messaging
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::io::{Read, Write};
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 
 use crate::serdes::{DumpError, Dumpable, LoadError, Loadable};
 use crate::{RemoteCall, RemoteCallResponse};
@@ -66,7 +66,8 @@ impl Packet {
 impl Loadable for Packet {
     fn load(buf: &mut dyn Read) -> Result<(Self, usize), LoadError> {
         let mut discriminant_buf = [u8::MAX; 1];
-        buf.read_exact(&mut discriminant_buf).map_err(LoadError::Io)?;
+        buf.read_exact(&mut discriminant_buf)
+            .map_err(LoadError::Io)?;
         let mut result: (Self, usize) = match discriminant_buf[0] {
             //0 => (None, 0),
             1 => {
@@ -88,15 +89,15 @@ impl Loadable for Packet {
             8 => {
                 let (obj, len) = <_>::load(buf)?;
                 (Self::Many(obj), len)
-            },
+            }
             9 => {
                 let (obj, len) = <_>::load(buf)?;
                 (Self::Translations(obj), len)
-            },
+            }
             10 => {
                 let (obj, len) = <_>::load(buf)?;
                 (Self::Language(obj), len)
-            },
+            }
             _ => return Err(LoadError::InvalidData),
         };
         result.1 += 1;
@@ -130,24 +131,39 @@ mod tests {
     #[cfg(feature = "encrypt")]
     #[test]
     fn encryption_integration_test() {
-        let key = hex_literal::hex!("59C4E408F27250B3147E7724511824F1D28ED7BEF43CF7103ACE747F77A2B265");
+        let key =
+            hex_literal::hex!("59C4E408F27250B3147E7724511824F1D28ED7BEF43CF7103ACE747F77A2B265");
         let nonce = [0u8; NONCE_SIZE];
-        let packet = Packet::Call(RemoteCall{
+        let packet = Packet::Call(RemoteCall {
             id: 42,
             function: "test".into(),
             parameters: Vec::new(),
         });
         let mut buffer = Vec::with_capacity(PACKET_BUFFER_SIZE);
         let len = packet.dump_encrypted(&mut buffer, &key, &nonce).unwrap();
-        println!("buffer: {}", String::from_utf8(buffer.as_slice()[..len].to_vec()).unwrap());
+        println!(
+            "buffer: {}",
+            String::from_utf8(buffer.as_slice()[..len].to_vec()).unwrap()
+        );
 
-        let (packet_out, _len) = Packet::load_encrypted(&buffer.as_slice()[..len], &key, &nonce).unwrap();
+        let (packet_out, _len) =
+            Packet::load_encrypted(&buffer.as_slice()[..len], &key, &nonce).unwrap();
 
         if let Packet::Call(call_out) = packet_out {
             if let Packet::Call(call_in) = packet {
-                assert_eq!(call_in.id, call_out.id, "Input and output packets do not match");
-                assert_eq!(call_in.function, call_out.function, "Input and output packets do not match");
-                assert_eq!(call_in.parameters.len(), call_out.parameters.len(), "Input and output packets do not match");
+                assert_eq!(
+                    call_in.id, call_out.id,
+                    "Input and output packets do not match"
+                );
+                assert_eq!(
+                    call_in.function, call_out.function,
+                    "Input and output packets do not match"
+                );
+                assert_eq!(
+                    call_in.parameters.len(),
+                    call_out.parameters.len(),
+                    "Input and output packets do not match"
+                );
             } else {
                 panic!("Packet in not a Call");
             }

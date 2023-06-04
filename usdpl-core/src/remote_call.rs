@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn remote_call_idempotence_test() {
-        let call = RemoteCall{
+        let call = RemoteCall {
             id: 42,
             function: "something very long just in case this causes unexpected issues".into(),
             parameters: vec!["param1".into(), 42f64.into()],
@@ -88,7 +88,10 @@ mod tests {
         assert_eq!(len, loaded_len, "Expected load and dump lengths to match");
 
         assert_eq!(loaded_call.id, call.id, "RemoteCall.id does not match");
-        assert_eq!(loaded_call.function, call.function, "RemoteCall.function does not match");
+        assert_eq!(
+            loaded_call.function, call.function,
+            "RemoteCall.function does not match"
+        );
         if let Primitive::String(loaded) = &loaded_call.parameters[0] {
             if let Primitive::String(original) = &call.parameters[0] {
                 assert_eq!(loaded, original, "RemoteCall.parameters[0] does not match");
