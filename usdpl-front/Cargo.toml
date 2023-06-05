@@ -47,6 +47,7 @@ hex = { version = "0.4", optional = true }
 nrpc = "0.6"
 usdpl-core = { version = "0.11", path = "../usdpl-core" }
 prost = "0.11"
+log = "0.4"
 
 [dev-dependencies]
 wasm-bindgen-test = { version = "0.3.13" }

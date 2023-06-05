@@ -24,6 +24,7 @@ fn generate_service_methods(
 ) -> proc_macro2::TokenStream {
     let mut gen_methods = Vec::with_capacity(service.methods.len());
     for method in &service.methods {
+        let method_name_str = method.name.clone();
         let method_name = quote::format_ident!("{}", method.name);
         let method_input = quote::format_ident!("{}{}", &service.name, method.input_type);
         let method_output = quote::format_ident!("{}{}Wasm", &service.name, method.output_type);
@@ -88,8 +89,9 @@ fn generate_service_methods(
                         let x2: #method_output_as_in = x.into();
                         Some(x2.into_wasm())
                     },
-                    Err(_e) => {
-                        // TODO log error
+                    Err(e) => {
+                        // log error
+                        log::error!("service:{}|method:{}|error:{}", self.service.descriptor(), #method_name_str, e);
                         None
                     }
                 }
@@ -468,6 +470,7 @@ impl ProtobufType {
             //"sfixed64" => quote::quote!{i64},
             8 => Self::Bool,
             9 => Self::String,
+            13 => Self::Uint32,
             //"bytes" => quote::quote!{Vec<u8>},
             t => Self::Custom(format!("UnknownType{}", t)),
         }
@@ -811,6 +814,9 @@ impl IServiceGenerator for WasmServiceGenerator {
                 use usdpl_front::_helpers::wasm_bindgen;
                 use usdpl_front::_helpers::wasm_bindgen_futures;
                 use usdpl_front::_helpers::js_sys;
+                use usdpl_front::_helpers::log;
+
+                use ::nrpc::ClientService;
 
                 use usdpl_front::wasm::*;
 

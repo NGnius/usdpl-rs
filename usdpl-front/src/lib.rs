@@ -22,6 +22,7 @@ pub mod _helpers {
     pub use js_sys;
     pub use wasm_bindgen;
     pub use wasm_bindgen_futures;
+    pub use log;
 }
 
 use std::sync::atomic::{AtomicU64, Ordering};
