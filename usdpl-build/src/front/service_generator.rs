@@ -80,7 +80,7 @@ fn generate_service_methods(
 
         gen_methods.push(quote::quote! {
             #[wasm_bindgen]
-            pub async fn #method_name(&mut self, #(#input_params)*) -> Option<#method_output> {
+            pub async fn #method_name(&self, #(#input_params)*) -> Option<#method_output> {
 
                 #params_to_fields_transformer
 

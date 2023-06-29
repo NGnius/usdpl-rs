@@ -14,7 +14,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = []
 decky = ["usdpl-core/decky"]
-debug = ["console_error_panic_hook"]
+debug = ["console_error_panic_hook", "console_log"]
 encrypt = ["usdpl-core/encrypt", "obfstr", "hex"]
 
 [dependencies]
@@ -22,6 +22,7 @@ wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 gloo-net = { version = "0.2", features = ["websocket"] }
 futures = "0.3"
+console_log = { version = "1.0", optional = true, features = ["color"] }
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
@@ -44,7 +45,7 @@ async-channel = "1.8"
 obfstr = { version = "0.3", optional = true }
 hex = { version = "0.4", optional = true }
 
-nrpc = "0.6"
+nrpc = { version = "0.7", path = "../../nRPC/nrpc" }
 usdpl-core = { version = "0.11", path = "../usdpl-core" }
 prost = "0.11"
 log = "0.4"

@@ -78,6 +78,8 @@ fn increment_id() -> u64 {
 pub fn init_usdpl(port: u16) {
     #[cfg(feature = "console_error_panic_hook")]
     console_error_panic_hook::set_once();
+    #[cfg(feature = "console_log")]
+    console_log::init_with_level(log::Level::Debug).expect("USDPL: error initializing console log");
     //REMOTE_PORT.store(port, std::sync::atomic::Ordering::SeqCst);
     unsafe {
         CTX = UsdplContext {

@@ -46,7 +46,7 @@ impl WebsocketServer {
         let tcp = TcpListener::bind(addr).await?;
 
         while let Ok((stream, _addr_do_not_use)) = tcp.accept().await {
-            tokio::spawn(Self::connection_handler(self.services.clone(), stream));
+            tokio::spawn(error_logger("USDPL websocket server error", Self::connection_handler(self.services.clone(), stream)));
         }
 
         Ok(())
@@ -65,6 +65,7 @@ impl WebsocketServer {
         services: ServiceRegistry<'static>,
         stream: TcpStream,
     ) -> Result<(), RatchetError> {
+        log::debug!("connection_handler invoked!");
         let upgraded = ratchet_rs::accept_with(
             stream,
             WebSocketConfig::default(),
@@ -76,6 +77,8 @@ impl WebsocketServer {
         .await?;
 
         let request_path = upgraded.request.uri().path();
+
+        log::debug!("accepted new connection on uri {}", request_path);
 
         let mut websocket = upgraded.websocket;
 
@@ -92,6 +95,7 @@ impl WebsocketServer {
                     ))
                 }
                 Message::Binary => {
+                    log::debug!("got binary ws message on uri {}", request_path);
                     let response = services
                         .call_descriptor(
                             descriptor.service,
@@ -102,6 +106,7 @@ impl WebsocketServer {
                         .map_err(|e| {
                             RatchetError::with_cause(ratchet_rs::ErrorKind::Protocol, e.to_string())
                         })?;
+                    log::debug!("service completed response on uri {}", request_path);
                     websocket.write_binary(response).await?;
                 }
                 Message::Ping(x) => websocket.write_pong(x).await?,
@@ -109,11 +114,12 @@ impl WebsocketServer {
                 Message::Close(_) => break,
             }
         }
+        log::debug!("ws connection {} closed", request_path);
         Ok(())
     }
 
     fn parse_uri_path<'a>(path: &'a str) -> Result<MethodDescriptor<'a>, &'static str> {
-        let mut iter = path.split('/');
+        let mut iter = path.trim_matches('/').split('/');
         if let Some(service) = iter.next() {
             if let Some(method) = iter.next() {
                 if iter.next().is_none() {
@@ -127,5 +133,11 @@ impl WebsocketServer {
         } else {
             Err("URL path has no service")
         }
+    }
+}
+
+async fn error_logger<E: std::error::Error>(msg: &'static str, f: impl core::future::Future<Output=Result<(), E>>) {
+    if let Err(e) = f.await {
+        log::error!("{}: {}", msg, e);
     }
 }

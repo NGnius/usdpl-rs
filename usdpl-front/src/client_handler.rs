@@ -54,7 +54,7 @@ impl WebSocketHandler {
 #[async_trait::async_trait]
 impl ClientHandler for WebSocketHandler {
     async fn call(
-        &mut self,
+        &self,
         package: &str,
         service: &str,
         method: &str,
