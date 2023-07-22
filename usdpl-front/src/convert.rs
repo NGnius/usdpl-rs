@@ -38,3 +38,11 @@ pub(crate) fn js_to_primitive(val: JsValue) -> Primitive {
 pub(crate) fn str_to_js<S: std::string::ToString>(s: S) -> JsString {
     s.to_string().into()
 }
+
+pub(crate) fn js_to_str(js: JsValue) -> String {
+    if let Some(s) = js.as_string() {
+        s
+    } else {
+        format!("{:?}", js)
+    }
+}

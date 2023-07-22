@@ -23,6 +23,8 @@ pub mod _helpers {
     pub use wasm_bindgen;
     pub use wasm_bindgen_futures;
     pub use log;
+    pub use futures;
+    pub use nrpc;
 }
 
 use std::sync::atomic::{AtomicU64, Ordering};

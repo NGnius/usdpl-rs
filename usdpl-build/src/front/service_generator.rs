@@ -35,68 +35,203 @@ fn generate_service_methods(
 
         let mut input_params = Vec::with_capacity(input_type.field.len());
         let mut params_to_fields = Vec::with_capacity(input_type.field.len());
-        for field in &input_type.field {
-            //let param_name = quote::format_ident!("val{}", i.to_string());
-            let type_enum = ProtobufType::from_field(field, &service.name, false);
-            //let rs_type_name = type_enum.to_tokens();
-            let js_type_name = type_enum.to_wasm_tokens();
-            let rs_type_name = type_enum.to_tokens();
-            let field_name = quote::format_ident!(
-                "{}",
-                field
-                    .name
-                    .as_ref()
-                    .expect("Protobuf message field needs a name")
-            );
-            input_params.push(quote::quote! {
-                #field_name: #js_type_name,
-            });
-            params_to_fields.push(quote::quote! {
-                #field_name: #rs_type_name::from_wasm(#field_name.into()),//: #field_name,
-            });
-        }
-        let params_to_fields_transformer = if input_type.field.len() == 1 {
-            let field_name = quote::format_ident!(
-                "{}",
-                input_type.field[0]
-                    .name
-                    .as_ref()
-                    .expect("Protobuf message field needs a name")
-            );
-            quote::quote! {
-                let val = #method_input::from_wasm(#field_name.into());
-            }
-        } else if input_type.field.is_empty() {
-            quote::quote! {
-                let val = #method_input {};
-            }
-        } else {
-            quote::quote! {
-                let val = #method_input {
-                    #(#params_to_fields)*
-                };
-            }
-        };
 
-        gen_methods.push(quote::quote! {
-            #[wasm_bindgen]
-            pub async fn #method_name(&self, #(#input_params)*) -> Option<#method_output> {
-
-                #params_to_fields_transformer
-
-                match self.service.#method_name(val.into()).await {
-                    Ok(x) => {
-                        let x2: #method_output_as_in = x.into();
-                        Some(x2.into_wasm())
-                    },
-                    Err(e) => {
-                        // log error
-                        log::error!("service:{}|method:{}|error:{}", self.service.descriptor(), #method_name_str, e);
-                        None
-                    }
+        match (method.client_streaming, method.server_streaming) {
+            (false, false) => {
+                for field in &input_type.field {
+                    //let param_name = quote::format_ident!("val{}", i.to_string());
+                    let type_enum = ProtobufType::from_field(field, &service.name, false);
+                    //let rs_type_name = type_enum.to_tokens();
+                    let js_type_name = type_enum.to_wasm_tokens();
+                    let rs_type_name = type_enum.to_tokens();
+                    let field_name = quote::format_ident!(
+                        "{}",
+                        field
+                            .name
+                            .as_ref()
+                            .expect("Protobuf message field needs a name")
+                    );
+                    input_params.push(quote::quote! {
+                        #field_name: #js_type_name,
+                    });
+                    params_to_fields.push(quote::quote! {
+                        #field_name: #rs_type_name::from_wasm(#field_name.into()),//: #field_name,
+                    });
                 }
-            }
-        });
+                let params_to_fields_transformer = if input_type.field.len() == 1 {
+                    let field_name = quote::format_ident!(
+                        "{}",
+                        input_type.field[0]
+                            .name
+                            .as_ref()
+                            .expect("Protobuf message field needs a name")
+                    );
+                    quote::quote! {
+                        let val = #method_input::from_wasm(#field_name.into());
+                    }
+                } else if input_type.field.is_empty() {
+                    quote::quote! {
+                        let val = #method_input {};
+                    }
+                } else {
+                    quote::quote! {
+                        let val = #method_input {
+                            #(#params_to_fields)*
+                        };
+                    }
+                };
+
+                gen_methods.push(quote::quote! {
+                    #[wasm_bindgen]
+                    pub async fn #method_name(&self, #(#input_params)*) -> Option<#method_output> {
+
+                        #params_to_fields_transformer
+
+                        match self.service.#method_name(val.into()).await {
+                            Ok(x) => {
+                                let x2: #method_output_as_in = x.into();
+                                Some(x2.into_wasm())
+                            },
+                            Err(e) => {
+                                // log error
+                                log::error!("service:{}|method:{}|error:{}", self.service.descriptor(), #method_name_str, e);
+                                None
+                            }
+                        }
+                    }
+                });
+            },
+            (true, false) => {
+                // many -> 1
+                gen_methods.push(quote::quote! {
+                    #[wasm_bindgen]
+                    pub async fn #method_name(&self, generator: js_sys::Function) -> Option<#method_output> {
+
+                        // function into Rust futures Stream
+                        let stream = Box::new(::usdpl_front::wasm::JsFunctionStream::<#method_input>::from_function(generator));
+
+                        match self.service.#method_name(stream).await {
+                            Ok(x) => {
+                                let x2: #method_output_as_in = x.into();
+                                Some(x2.into_wasm())
+                            },
+                            Err(e) => {
+                                // log error
+                                log::error!("service:{}|method:{}|error:{}", self.service.descriptor(), #method_name_str, e);
+                                None
+                            }
+                        }
+                    }
+                });
+            },
+            (false, true) => {
+                // 1 -> many
+                for field in &input_type.field {
+                    //let param_name = quote::format_ident!("val{}", i.to_string());
+                    let type_enum = ProtobufType::from_field(field, &service.name, false);
+                    //let rs_type_name = type_enum.to_tokens();
+                    let js_type_name = type_enum.to_wasm_tokens();
+                    let rs_type_name = type_enum.to_tokens();
+                    let field_name = quote::format_ident!(
+                        "{}",
+                        field
+                            .name
+                            .as_ref()
+                            .expect("Protobuf message field needs a name")
+                    );
+                    input_params.push(quote::quote! {
+                        #field_name: #js_type_name,
+                    });
+                    params_to_fields.push(quote::quote! {
+                        #field_name: #rs_type_name::from_wasm(#field_name.into()),//: #field_name,
+                    });
+                }
+                let params_to_fields_transformer = if input_type.field.len() == 1 {
+                    let field_name = quote::format_ident!(
+                        "{}",
+                        input_type.field[0]
+                            .name
+                            .as_ref()
+                            .expect("Protobuf message field needs a name")
+                    );
+                    quote::quote! {
+                        let val = #method_input::from_wasm(#field_name.into());
+                    }
+                } else if input_type.field.is_empty() {
+                    quote::quote! {
+                        let val = #method_input {};
+                    }
+                } else {
+                    quote::quote! {
+                        let val = #method_input {
+                            #(#params_to_fields)*
+                        };
+                    }
+                };
+
+                gen_methods.push(quote::quote! {
+                    #[wasm_bindgen]
+                    pub async fn #method_name(&self, #(#input_params)*, callback: js_sys::Function) {
+
+                        #params_to_fields_transformer
+
+                        match self.service.#method_name(val.into()).await {
+                            Ok(x) => {
+                                while let Some(next_result) = x.next().await {
+                                    match next_result {
+                                        Err(e) => {
+                                            log::error!("service:{}|method:{}|error:{}", self.service.descriptor(), #method_name_str, e);
+                                        },
+                                        Ok(item) => {
+                                            callback.call1(JsValue::undefined(), item.into_wasm_streamable());
+                                        }
+                                    }
+                                }
+                            },
+                            Err(e) => {
+                                // log error
+                                log::error!("service:{}|method:{}|error:{}", self.service.descriptor(), #method_name_str, e);
+                            }
+                        }
+                    }
+                });
+            },
+            (true, true) => {
+                // many -> many
+                gen_methods.push(quote::quote! {
+                    #[wasm_bindgen]
+                    pub async fn #method_name(&self, generator: js_sys::Function, callback: js_sys::Function) -> Option<#method_output> {
+
+                        // function into Rust futures Stream
+                        let stream = Box::new(::usdpl_front::wasm::JsFunctionStream::<#method_input>::from_function(generator));
+
+                        match self.service.#method_name(stream).await {
+                            Ok(x) => {
+                                while let Some(next_result) = x.next().await {
+                                    match next_result {
+                                        Err(e) => {
+                                            log::error!("service:{}|method:{}|error:{}", self.service.descriptor(), #method_name_str, e);
+                                        },
+                                        Ok(item) => {
+                                            callback.call1(JsValue::undefined(), item.into_wasm_streamable());
+                                        }
+                                    }
+                                }
+                            },
+                            Err(e) => {
+                                // log error
+                                log::error!("service:{}|method:{}|error:{}", self.service.descriptor(), #method_name_str, e);
+                                None
+                            }
+                        }
+                    }
+                });
+            },
+        }
+
+
+
+
     }
     quote::quote! {
         #(#gen_methods)*
@@ -198,6 +333,7 @@ fn generate_wasm_struct_interop(
             .as_ref()
             .expect("Protobuf message needs a name")
     );
+    let js_map_name = quote::format_ident!("{}", "js_map");
     let mut gen_fields = Vec::with_capacity(descriptor.field.len());
     let mut gen_into_fields = Vec::with_capacity(descriptor.field.len());
     let mut gen_from_fields = Vec::with_capacity(descriptor.field.len());
@@ -288,16 +424,20 @@ fn generate_wasm_struct_interop(
     } else if descriptor.field.len() == 1 {
         let field = &descriptor.field[0];
         //dbg!(descriptor, field);
+        let field_name_str = field
+            .name
+            .as_ref()
+            .expect("Protobuf message field needs a name");
         let field_name = quote::format_ident!(
             "{}",
-            field
-                .name
-                .as_ref()
-                .expect("Protobuf message field needs a name")
+            field_name_str
         );
         let type_enum = ProtobufType::from_field(field, service, is_known_map(field, known_maps));
         let type_name = type_enum.to_tokens();
         let wasm_type_name = type_enum.to_wasm_tokens();
+
+        let into_wasm_streamable = quote::quote!{self.into_wasm_streamable()};
+        let from_wasm_streamable = quote::quote!{#type_name::from_wasm_streamable(js)};
 
         quote::quote! {
             pub type #msg_name = #type_name;
@@ -320,22 +460,41 @@ fn generate_wasm_struct_interop(
                 }
             }
 
+            impl ::usdpl_front::wasm::FromWasmStreamableType for #msg_name {
+                fn from_wasm_streamable(js: JsValue) -> Result<Self, ::usdpl_front::wasm::WasmStreamableConversionError> {
+                    #from_wasm_streamable
+                }
+            }
+
+            impl ::usdpl_front::wasm::IntoWasmStreamableType for #msg_name {
+                fn into_wasm_streamable(self) -> JsValue {
+                    #into_wasm_streamable
+                }
+            }
+
             #(#gen_nested_types)*
 
             #(#gen_enums)*
         }
     } else {
+        let mut gen_into_wasm_streamable_fields = Vec::with_capacity(descriptor.field.len());
+        let mut gen_from_wasm_streamable_fields = Vec::with_capacity(descriptor.field.len());
+
         for field in &descriptor.field {
+            let field_name_str = field
+                .name
+                .as_ref()
+                .expect("Protobuf message field needs a name");
             let field_name = quote::format_ident!(
                 "{}",
-                field
-                    .name
-                    .as_ref()
-                    .expect("Protobuf message field needs a name")
+                field_name_str
             );
             let type_enum =
                 ProtobufType::from_field(field, service, is_known_map(field, known_maps));
             let type_name = type_enum.to_tokens();
+
+            let into_wasm_streamable = type_enum.to_into_wasm_streamable(field_name_str, &js_map_name);
+            let from_wasm_streamable = type_enum.to_from_wasm_streamable(field_name_str, &js_map_name);
             //let wasm_type_name = type_enum.to_wasm_tokens();
             gen_fields.push(quote::quote! {
                 pub #field_name: #type_name,
@@ -347,6 +506,9 @@ fn generate_wasm_struct_interop(
             gen_from_fields.push(quote::quote! {
                 #field_name: <_>::from(other.#field_name),
             });
+
+            gen_into_wasm_streamable_fields.push(into_wasm_streamable);
+            gen_from_wasm_streamable_fields.push(from_wasm_streamable);
         }
 
         let wasm_attribute_maybe =
@@ -396,6 +558,23 @@ fn generate_wasm_struct_interop(
                     #msg_name {
                         #(#gen_from_fields)*
                     }
+                }
+            }
+
+            impl ::usdpl_front::wasm::FromWasmStreamableType for #msg_name {
+                fn from_wasm_streamable(js: JsValue) -> Result<Self, ::usdpl_front::wasm::WasmStreamableConversionError> {
+                    let #js_map_name = js_sys::Map::from(js);
+                    Ok(Self {
+                        #(#gen_from_wasm_streamable_fields)*
+                    })
+                }
+            }
+
+            impl ::usdpl_front::wasm::IntoWasmStreamableType for #msg_name {
+                fn into_wasm_streamable(self) -> JsValue {
+                    let #js_map_name = js_sys::Map::new();
+                    #(#gen_into_wasm_streamable_fields)*
+                    #js_map_name.into()
                 }
             }
 
@@ -550,6 +729,18 @@ impl ProtobufType {
                 quote::quote! {#ident}
             }
         }
+    }
+
+    fn to_into_wasm_streamable(&self, field_name: &str, js_map_name: &syn::Ident) -> proc_macro2::TokenStream {
+        //let type_tokens = self.to_tokens();
+        //let field_ident = quote::format_ident!("{}", field_name);
+        quote::quote!{#js_map_name.set(#field_name.into(), self.field_ident);}
+    }
+
+    fn to_from_wasm_streamable(&self, field_name: &str, js_map_name: &syn::Ident) -> proc_macro2::TokenStream {
+        let type_tokens = self.to_tokens();
+        //let field_ident = quote::format_ident!("{}", field_name);
+        quote::quote!{#field_name: #type_tokens::from_wasm_streamable(#js_map_name.get(#field_name.into()))?,}
     }
 }
 
@@ -815,8 +1006,10 @@ impl IServiceGenerator for WasmServiceGenerator {
                 use usdpl_front::_helpers::wasm_bindgen_futures;
                 use usdpl_front::_helpers::js_sys;
                 use usdpl_front::_helpers::log;
-
-                use ::nrpc::ClientService;
+                use usdpl_front::_helpers::futures;
+                use usdpl_front::_helpers::futures::StreamExt;
+                use usdpl_front::_helpers::nrpc::ClientService;
+                use usdpl_front::wasm::{IntoWasmStreamableType, FromWasmStreamableType};
 
                 use usdpl_front::wasm::*;
 
